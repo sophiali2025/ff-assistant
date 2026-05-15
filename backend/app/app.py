@@ -12,7 +12,7 @@ def get_matchup (league_id: int):
     return MOCK_MATCHUP
 
 @app.get("/player/{player_id}")
-def get_player (player_id: int):
+def get_player (player_id: str):
     roster_by_id = {p["player_id"]: p for p in MOCK_ROSTER}
     player = roster_by_id.get(player_id) 
     return player

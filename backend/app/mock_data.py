@@ -1,7 +1,7 @@
 
 MOCK_ROSTER = [
     {
-        "player_id": 4042,
+        "player_id": "4042",
         "name": "Brock Purdy",
         "position": "QB",
         "team": "SF",
@@ -12,7 +12,7 @@ MOCK_ROSTER = [
         "slot": "QB"
     },
     {
-        "player_id": 4046,
+        "player_id": "4046",
         "name": "Christian McCaffrey",
         "position": "RB",
         "team": "SF",
@@ -23,7 +23,7 @@ MOCK_ROSTER = [
         "slot": "RB"
     },
     {
-        "player_id": 4051,
+        "player_id": "4051",
         "name": "Tyrone Tracy",
         "position": "RB",
         "team": "NYG",
@@ -34,7 +34,7 @@ MOCK_ROSTER = [
         "slot": "RB"
     },
     {
-        "player_id": 7564,
+        "player_id": "7564",
         "name": "Ja'Marr Chase",
         "position": "WR",
         "team": "CIN",
@@ -45,7 +45,7 @@ MOCK_ROSTER = [
         "slot": "WR"
     },
     {
-        "player_id": 6801,
+        "player_id": "6801",
         "name": "Tyreek Hill",
         "position": "WR",
         "team": "MIA",
@@ -56,7 +56,7 @@ MOCK_ROSTER = [
         "slot": "WR"
     },
     {
-        "player_id": 4034,
+        "player_id": "4034",
         "name": "Travis Kelce",
         "position": "TE",
         "team": "KC",
@@ -67,7 +67,7 @@ MOCK_ROSTER = [
         "slot": "TE"
     },
     {
-        "player_id": 5012,
+        "player_id": "5012",
         "name": "Derrick Henry",
         "position": "RB",
         "team": "TEN",
@@ -78,7 +78,7 @@ MOCK_ROSTER = [
         "slot": "FLX"
     },
     {
-        "player_id": 4296,
+        "player_id": "4296",
         "name": "Will Lutz",
         "position": "K",
         "team": "DEN",
@@ -89,7 +89,7 @@ MOCK_ROSTER = [
         "slot": "K"
     },
     {
-        "player_id": 2109,
+        "player_id": "2109",
         "name": "Broncos",
         "position": "DEF",
         "team": "DEN",
@@ -100,7 +100,7 @@ MOCK_ROSTER = [
         "slot": "DEF"
     },
     {
-        "player_id": 3294,
+        "player_id": "3294",
         "name": "Davante Adams",
         "position": "WR",
         "team": "LV",
@@ -111,7 +111,7 @@ MOCK_ROSTER = [
         "slot": "BN"
     },
     {
-        "player_id": 3299,
+        "player_id": "3299",
         "name": "Blake Corum",
         "position": "RB",
         "team": "LAR",
@@ -122,7 +122,7 @@ MOCK_ROSTER = [
         "slot": "BN"
     },
     {
-        "player_id": 3388,
+        "player_id": "3388",
         "name": "Christian Kirk",
         "position": "WR",
         "team": "SF",
@@ -133,7 +133,7 @@ MOCK_ROSTER = [
         "slot": "BN"
     },
     {
-        "player_id": 3412,
+        "player_id": "3412",
         "name": "Adonai Mitchell",
         "position": "WR",
         "team": "NYJ",
@@ -144,7 +144,7 @@ MOCK_ROSTER = [
         "slot": "BN"
     },
     {
-        "player_id": 6130,
+        "player_id": "6130",
         "name": "Stefon Diggs",
         "position": "WR",
         "team": "BUF",
