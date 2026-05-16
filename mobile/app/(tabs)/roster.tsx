@@ -1,14 +1,24 @@
 import { StyleSheet } from 'react-native';
 
-import EditScreenInfo from '@/components/EditScreenInfo';
-import { Text, View } from '@/components/Themed';
+import { View } from '@/components/default/Themed';
+import Header from '@/components/Header';
+import WeeklyMatch from '@/components/WeeklyMatch';
+import RosterList from '@/components/RosterList';
 
-export default function TabOneScreen() {
+export default function RosterScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Tab One</Text>
-      <View style={styles.separator} lightColor="#eee" darkColor="rgba(255,255,255,0.1)" />
-      <EditScreenInfo path="app/(tabs)/index.tsx" />
+      <Header week={9} initials="SL" />
+      <WeeklyMatch
+        week = {9}
+        myTeamName="My Team"
+        myActual={98.4}
+        myProjected={96.2}
+        oppTeamName="Other Team"
+        oppActual={81.2}
+        oppProjected={87.9}
+      />
+      <RosterList />
     </View>
   );
 }
@@ -16,16 +26,6 @@ export default function TabOneScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  separator: {
-    marginVertical: 30,
-    height: 1,
-    width: '80%',
+    backgroundColor: '#23173E',
   },
 });
