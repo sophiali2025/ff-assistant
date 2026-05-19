@@ -3,8 +3,12 @@
 // process.env. This lets us change the URL without editing code.
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
-// Hardcoded for now — later this will come from the user's Sleeper account
-const LEAGUE_ID = "1046187576047603712";
+// Hardcoded for now
+const USERNAME = "sophiali";
+const USER_ID = "1130559048241356800"
+const LEAGUE_ID = "1267619828559007744";
+const WEEK = 9
+const ROSTER_ID = 5
 
 // --- What is fetch? ---
 // fetch() is built into JavaScript. It makes HTTP requests (like
@@ -20,18 +24,33 @@ const LEAGUE_ID = "1046187576047603712";
 // instead of the data you want.
 
 export async function fetchMatchup() {
-  const response = await fetch(`${API_URL}/matchup/${LEAGUE_ID}`);
-
-  // fetch doesn't throw on HTTP errors (like 404 or 500) — it only
-  // throws on network failures. So we check response.ok manually.
-  if (!response.ok) {
-    throw new Error(`Failed to fetch matchup: ${response.status}`);
+  // get my matchup (gives us points + matchup_id)
+  const myResponse = await fetch(`${API_URL}/matchup/${LEAGUE_ID}/${WEEK}/${ROSTER_ID}`);
+  if (!myResponse.ok) {
+    throw new Error(`Failed to fetch my matchup: ${myResponse.status}`);
   }
+  const myMatchup = await myResponse.json();
 
-  // response.json() also returns a Promise (parsing takes time),
-  // so we await it too. This gives us a plain JavaScript object.
-  const data = await response.json();
-  return data;
+  // get opponent's matchup using matchup_id from step 1
+  const oppResponse = await fetch(`${API_URL}/matchup/${LEAGUE_ID}/${WEEK}/${ROSTER_ID}/${myMatchup.matchup_id}`);
+  if (!oppResponse.ok) {
+    throw new Error(`Failed to fetch opponent matchup: ${oppResponse.status}`);
+  }
+  const oppMatchup = await oppResponse.json();
+
+  // combine into the shape our WeeklyMatch component expects.
+  // sleeper matchups only have actual points, placeholders for projected for now.
+  return {
+    week: WEEK,
+    my_team: {
+      name: "My Team",
+      points: myMatchup.points,
+    },
+    opponent: {
+      name: "Opponent",
+      points: oppMatchup.points,
+    },
+  };
 }
 
 export async function fetchRoster() {

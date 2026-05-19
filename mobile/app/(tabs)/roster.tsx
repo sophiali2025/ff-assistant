@@ -52,10 +52,10 @@ export default function RosterScreen() {
           week={matchup.week}
           myTeamName={matchup.my_team.name}
           myActual={matchup.my_team.points}
-          myProjected={matchup.my_team.projected}
+          myProjected={0}
           oppTeamName={matchup.opponent.name}
           oppActual={matchup.opponent.points}
-          oppProjected={matchup.opponent.projected}
+          oppProjected={0}
         />
       )}
 
