@@ -70,4 +70,5 @@ The mobile app connects to the backend via `EXPO_PUBLIC_API_URL` (set in `.env`)
 - `TENOR_API_KEY`
 
 ## Notes
-I'm building the front end in react native but i don't have much experience on it. Teach me react basics while building the front end
+I'm building the front end in react native but i don't have much experience on it. Teach me react basics while building the front end.
+I'm making a full stack app for the first time. Teach me how to make requests to the backend while you are implementing them
