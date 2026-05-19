@@ -1,5 +1,6 @@
 
-MOCK_ROSTER = [
+MOCK_ROSTER = {
+  "1046187576047603712": [
     {
         "player_id": "4042",
         "name": "Brock Purdy",
@@ -154,18 +155,21 @@ MOCK_ROSTER = [
         "is_starter": False,
         "slot": "BN"
     }
-]
+  ]
+}
 
 MOCK_MATCHUP = {
+  "1046187576047603712": {
     "week": 9,
     "my_team": {
-        "name": "Sophia's Squad",
-        "points": 98.4,
-        "projected": 142.6
+        "name": "Sophia's Team",
+        "points": 102.8,
+        "projected": 110.2
     },
     "opponent": {
-        "name": "Jake's Monsters",
-        "points": 81.2,
-        "projected": 118.3
+        "name": "Jake's Team",
+        "points": 70.4,
+        "projected": 108.6
     }
+  }
 }

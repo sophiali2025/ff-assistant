@@ -1,21 +1,20 @@
 from fastapi import FastAPI
 from .mock_data import MOCK_ROSTER, MOCK_MATCHUP
-
-app = FastAPI()
+from main import app
 
 @app.get("/roster/{league_id}")
-def get_roster(league_id: int):
-    return MOCK_ROSTER
+def get_roster(league_id: str):
+    return MOCK_ROSTER.get(league_id)
 
 @app.get("/matchup/{league_id}")
-def get_matchup (league_id: int):
-    return MOCK_MATCHUP
+def get_matchup(league_id: str):
+    return MOCK_MATCHUP.get(league_id)
 
-@app.get("/player/{player_id}")
-def get_player (player_id: str):
-    roster_by_id = {p["player_id"]: p for p in MOCK_ROSTER}
-    player = roster_by_id.get(player_id) 
-    return player
+@app.get("/player/{league_id}/{player_id}")
+def get_player(league_id: str, player_id: str):
+    roster = MOCK_ROSTER.get(league_id, [])
+    roster_by_id = {p["player_id"]: p for p in roster}
+    return roster_by_id.get(player_id)
 
 
 # @app.get("/posts")
