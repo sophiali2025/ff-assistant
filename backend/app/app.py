@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from .mock_data import MOCK_ROSTER, MOCK_MATCHUP
 from main import app
-from services.sleeper import get_user, get_rosters, get_matchups
+from services.sleeper import get_user, get_rosters, get_matchups, get_users_in_league
 
 @app.get("/roster/{league_id}")
 def get_roster(league_id: str):
@@ -46,3 +46,21 @@ def fetch_opp_matchup(league_id: str, week: int, roster_id: int, matchup_id: int
     opp_matchup = next((m for m in matchups if m["matchup_id"] == matchup_id
         and m["roster_id"] != roster_id), None)
     return opp_matchup
+
+@app.get("/team/{league_id}/{user_id}")
+def fetch_my_team(league_id: str, user_id: str):
+    users = get_users_in_league(league_id)
+    user = next((u for u in users if u["user_id"] == user_id), None)
+    return {"team_name": user["metadata"]["team_name"]}
+
+@app.get("/team/{league_id}/roster/{roster_id}")                                                                                                                                                                   
+def fetch_team_by_roster(league_id: str, roster_id: int):
+    # find the owner_id for this roster_id
+    rosters = get_rosters(league_id)
+    roster = next(r for r in rosters if r["roster_id"] == roster_id)
+    owner_id = roster["owner_id"]
+
+    # find the user with that owner_id
+    users = get_users_in_league(league_id)
+    user = next(u for u in users if u["user_id"] == owner_id)
+    return {"team_name": user["metadata"]["team_name"]}

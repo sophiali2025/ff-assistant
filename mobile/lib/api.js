@@ -7,7 +7,7 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const USERNAME = "sophiali";
 const USER_ID = "1130559048241356800"
 const LEAGUE_ID = "1267619828559007744";
-const WEEK = 9
+const WEEK = 17
 const ROSTER_ID = 5
 
 // --- What is fetch? ---
@@ -24,30 +24,37 @@ const ROSTER_ID = 5
 // instead of the data you want.
 
 export async function fetchMatchup() {
-  // get my matchup (gives us points + matchup_id)
-  const myResponse = await fetch(`${API_URL}/matchup/${LEAGUE_ID}/${WEEK}/${ROSTER_ID}`);
-  if (!myResponse.ok) {
-    throw new Error(`Failed to fetch my matchup: ${myResponse.status}`);
-  }
-  const myMatchup = await myResponse.json();
+  // 1. get my matchup + my team name at the same time.
+  // Promise.all runs them in parallel (faster than one-by-one).
+  const [myResponse, myTeamResponse] = await Promise.all([
+    fetch(`${API_URL}/matchup/${LEAGUE_ID}/${WEEK}/${ROSTER_ID}`),
+    fetch(`${API_URL}/team/${LEAGUE_ID}/${USER_ID}`),
+  ]);
+  if (!myResponse.ok) throw new Error(`Failed to fetch my matchup: ${myResponse.status}`);
+  if (!myTeamResponse.ok) throw new Error(`Failed to fetch my team: ${myTeamResponse.status}`);
 
-  // get opponent's matchup using matchup_id from step 1
+  const myMatchup = await myResponse.json();
+  const myTeam = await myTeamResponse.json();
+
+  // 2. get opponent's matchup (needs matchup_id from step 1)
   const oppResponse = await fetch(`${API_URL}/matchup/${LEAGUE_ID}/${WEEK}/${ROSTER_ID}/${myMatchup.matchup_id}`);
-  if (!oppResponse.ok) {
-    throw new Error(`Failed to fetch opponent matchup: ${oppResponse.status}`);
-  }
+  if (!oppResponse.ok) throw new Error(`Failed to fetch opponent matchup: ${oppResponse.status}`);
   const oppMatchup = await oppResponse.json();
 
-  // combine into the shape our WeeklyMatch component expects.
-  // sleeper matchups only have actual points, placeholders for projected for now.
+  // 3. get opponent's team name (needs roster_id from step 2)
+  const oppTeamResponse = await fetch(`${API_URL}/team/${LEAGUE_ID}/roster/${oppMatchup.roster_id}`);
+  if (!oppTeamResponse.ok) throw new Error(`Failed to fetch opponent team: ${oppTeamResponse.status}`);
+  const oppTeam = await oppTeamResponse.json();
+
+  // 4. combine into the shape our WeeklyMatch component expects
   return {
     week: WEEK,
     my_team: {
-      name: "My Team",
+      name: myTeam.team_name,
       points: myMatchup.points,
     },
     opponent: {
-      name: "Opponent",
+      name: oppTeam.team_name,
       points: oppMatchup.points,
     },
   };
