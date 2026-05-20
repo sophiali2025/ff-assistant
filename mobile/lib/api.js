@@ -61,12 +61,76 @@ export async function fetchMatchup() {
 }
 
 export async function fetchRoster() {
-  const response = await fetch(`${API_URL}/roster/${LEAGUE_ID}`);
+  // 1. Get roster (player IDs) and matchup (points) in parallel.
+  // The roster tells us WHO is on the team. The matchup tells us
+  // how many points each player scored this week.
+  const [rosterResponse, matchupResponse] = await Promise.all([
+    fetch(`${API_URL}/roster/${LEAGUE_ID}/${USER_ID}`),
+    fetch(`${API_URL}/matchup/${LEAGUE_ID}/${WEEK}/${ROSTER_ID}`),
+  ]);
+  if (!rosterResponse.ok) throw new Error(`Failed to fetch roster: ${rosterResponse.status}`);
+  if (!matchupResponse.ok) throw new Error(`Failed to fetch matchup: ${matchupResponse.status}`);
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch roster: ${response.status}`);
-  }
+  const roster = await rosterResponse.json();
+  const matchup = await matchupResponse.json();
 
-  const data = await response.json();
-  return data;
+  // 2. Fetch details for every player on the roster in parallel.
+  // roster.players is an array of IDs like ["4042", "4046", ...].
+  // We call GET /player/{id} for each one, all at the same time.
+  const playerResponses = await Promise.all(
+    roster.players.map((id) => fetch(`${API_URL}/player/${id}`))
+  );
+  const playerDetails = await Promise.all(
+    playerResponses.map((r) => r.json())
+  );
+
+  // 3. Build a lookup: player_id → player details (player_id is 
+  // now a key), so we can quickly find any player's info without
+  // looping each time.
+  const detailsById = {};
+  roster.players.forEach((id, i) => {
+    detailsById[id] = playerDetails[i];
+  });
+
+  // 4. Build the starters list (in order) with correct slots.
+  // roster.starters is ordered: positions 1-6 use the player's
+  // position, 7th and 8th are FLEX, then K and DEF follow.
+  const starters = roster.starters.map((id, index) => {
+    const detail = detailsById[id];
+    let slot;
+    if (index === 6 || index === 7) {
+      slot = "FLX";
+    } else {
+      // Use the player's fantasy position (QB, RB, WR, etc.)
+      slot = detail.position ?? "??";
+    }
+
+    return {
+      player_id: id,
+      name: `${detail.first_name} ${detail.last_name}`,
+      slot,
+      status: detail.injury_status?.toLowerCase() ?? "active",
+      points_this_week: matchup.players_points?.[id] ?? 0,
+      projected_points: 0,
+    };
+  });
+
+  // 5. Build the bench list — everyone in players who isn't a starter.
+  const starterSet = new Set(roster.starters);
+  const bench = roster.players
+    .filter((id) => !starterSet.has(id))
+    .map((id) => {
+      const detail = detailsById[id];
+      return {
+        player_id: id,
+        name: `${detail.first_name} ${detail.last_name}`,
+        slot: "BN",
+        status: detail.injury_status?.toLowerCase() ?? "active",
+        points_this_week: matchup.players_points?.[id] ?? 0,
+        projected_points: 0,
+      };
+    });
+
+  // 6. Return starters first, then bench — that's the natural roster order.
+  return [...starters, ...bench];
 }

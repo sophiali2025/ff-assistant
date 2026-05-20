@@ -1,17 +1,20 @@
+import json
 from fastapi import FastAPI
 from .mock_data import MOCK_ROSTER, MOCK_MATCHUP
 from main import app
 from services.sleeper import get_user, get_rosters, get_matchups, get_users_in_league
 
-@app.get("/roster/{league_id}")
-def get_roster(league_id: str):
-    return MOCK_ROSTER.get(league_id)
+# --- API routes ---
 
-@app.get("/player/{league_id}/{player_id}")
-def get_player(league_id: str, player_id: str):
-    roster = MOCK_ROSTER.get(league_id, [])
-    roster_by_id = {p["player_id"]: p for p in roster}
-    return roster_by_id.get(player_id)
+# Load the player database once at startup. This file is a JSON
+# dictionary keyed by player_id, so looking up a player is just
+# all_players[player_id] — no looping or searching needed.
+with open("all_players.txt", "r") as f:
+    all_players = json.load(f)
+
+@app.get("/player/{player_id}")
+def get_player(player_id: str):
+    return all_players.get(player_id)
 
 
 # --- Sleeper API routes ---
@@ -19,6 +22,7 @@ def get_player(league_id: str, player_id: str):
 # Your backend acts as a "proxy" — the mobile app calls your backend,
 # and your backend calls Sleeper. This keeps all API logic server-side.
 
+# user info
 @app.get("/user/{username}")
 def fetch_user(username: str):
     return get_user(username)
@@ -28,12 +32,7 @@ def get_user_id(username: str):
     user = get_user(username)
     return {"user_id": user["user_id"]}
 
-# @app.get("/roster/{league_id}/{user_id}")
-# def fetch_roster(league_id: str, user_id: str):
-#     rosters = get_rosters(league_id)
-#     my_roster = next(r for r in rosters if r["owner_id"] == user_id)
-#     return my_roster
-
+# matchup info
 @app.get("/matchup/{league_id}/{week}/{roster_id}")
 def fetch_my_matchup(league_id: str, week: int, roster_id: int):
     matchups = get_matchups(league_id, week)
@@ -64,3 +63,10 @@ def fetch_team_by_roster(league_id: str, roster_id: int):
     users = get_users_in_league(league_id)
     user = next(u for u in users if u["user_id"] == owner_id)
     return {"team_name": user["metadata"]["team_name"]}
+
+# roster info
+@app.get("/roster/{league_id}/{user_id}")
+def fetch_roster(league_id: str, user_id: str):
+    rosters = get_rosters(league_id)
+    my_roster = next(r for r in rosters if r["owner_id"] == user_id)
+    return my_roster

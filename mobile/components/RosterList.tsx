@@ -1,13 +1,6 @@
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import PlayerRow from './PlayerRow';
 
-// --- Props instead of hardcoded data ---
-// Previously the roster was a const array defined right here.
-// Now the parent component (RosterScreen) fetches the data and
-// passes it down as a prop. This is called "lifting state up" —
-// a core React pattern where the parent owns the data and children
-// just receive and display it.
-
 type Player = {
   player_id: string;
   name: string;
