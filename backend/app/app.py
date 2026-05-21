@@ -3,18 +3,19 @@ from fastapi import FastAPI
 from .mock_data import MOCK_ROSTER, MOCK_MATCHUP
 from main import app
 from services.sleeper import get_user, get_rosters, get_matchups, get_users_in_league
+from services.tank01 import get_player_projection, get_team_projection
 
 # --- API routes ---
 
 # Load the player database once at startup. This file is a JSON
 # dictionary keyed by player_id, so looking up a player is just
 # all_players[player_id] — no looping or searching needed.
-with open("all_players.txt", "r") as f:
-    all_players = json.load(f)
+with open("sleeper_all_players.txt", "r") as f:
+    sleeper_all_players = json.load(f)
 
 @app.get("/player/{player_id}")
 def get_player(player_id: str):
-    return all_players.get(player_id)
+    return sleeper_all_players.get(player_id)
 
 
 # --- Sleeper API routes ---
@@ -70,3 +71,150 @@ def fetch_roster(league_id: str, user_id: str):
     rosters = get_rosters(league_id)
     my_roster = next(r for r in rosters if r["owner_id"] == user_id)
     return my_roster
+
+
+# --- Tank01 API routes ---
+
+# League scoring settings (hardcoded for now).
+# These come from the Sleeper league settings screenshots.
+SCORING = {
+    "pass_yds":  0.04,   # +0.04 per yard (25 yards = 1 point)
+    "pass_td":   4,
+    "pass_int":  -1,
+    "rush_yds":  0.1,    # +0.1 per yard (10 yards = 1 point)
+    "rush_td":   6,
+    "rec":       1,      # PPR: 1 point per reception
+    "rec_yds":   0.1,    # +0.1 per yard (10 yards = 1 point)
+    "rec_td":    6,
+    "two_pt":    2,
+    "fum_lost":  -2,
+}
+
+# Defense/Special Teams scoring settings (from league settings).
+DEF_SCORING = {
+    "def_td":       6,   # defensive touchdown (pick-6, fumble return TD, etc.)
+    "return_td":    6,   # kick/punt return touchdown
+    "sack":         1,
+    "interception": 2,
+    "fum_rec":      2,   # fumble recovery
+    "safety":       2,
+    "forced_fum":   1,
+    "block_kick":   2,
+}
+
+# Points-allowed brackets — the fantasy points you get based on how
+# many real points the opposing offense scored against your defense.
+# Example: if ptsAgainst is 12, that falls in the 7–13 bracket → 4 pts.
+POINTS_ALLOWED_BRACKETS = [
+    (0,  0,  10),   # shut-out
+    (1,  6,   7),
+    (7,  13,  4),
+    (14, 20,  1),
+    (21, 27,  0),
+    (28, 34, -1),
+    (35, 999, -4),  # 35+
+]
+
+def _pts_allowed_score(pts_against: float) -> float:
+    """Return fantasy points for the points-allowed bracket."""
+    pts = int(pts_against)
+    for low, high, score in POINTS_ALLOWED_BRACKETS:
+        if low <= pts <= high:
+            return score
+    return -4  # fallback: treat as 35+
+
+@app.get("/projection/{player_id}/{week}")
+def fetch_projection(player_id: str, week: int):
+    data = get_player_projection(player_id)
+
+    # The response has body.projections — an array of weekly stats.
+    # Each entry has a "week" field like "Week_17". We find the one
+    # matching the requested week number.
+    projections = data["body"]["projections"]
+    week_key = f"Week_{week}"
+    week_data = next((p for p in projections if p["week"] == week_key), None)
+
+    if week_data is None:
+        return {"error": f"No projection found for week {week}"}
+
+    # All values from Tank01 are strings, so we convert to float.
+    passing = week_data["Passing"]
+    rushing = week_data["Rushing"]
+    receiving = week_data["Receiving"]
+
+    projected_points = (
+        # Passing
+        float(passing["passYds"]) * SCORING["pass_yds"]
+        + float(passing["passTD"]) * SCORING["pass_td"]
+        + float(passing["int"]) * SCORING["pass_int"]
+        # Rushing
+        + float(rushing["rushYds"]) * SCORING["rush_yds"]
+        + float(rushing["rushTD"]) * SCORING["rush_td"]
+        # Receiving
+        + float(receiving["receptions"]) * SCORING["rec"]
+        + float(receiving["recYds"]) * SCORING["rec_yds"]
+        + float(receiving["recTD"]) * SCORING["rec_td"]
+        # Misc
+        + float(week_data.get("twoPointConversion", "0")) * SCORING["two_pt"]
+        + float(week_data.get("fumblesLost", "0")) * SCORING["fum_lost"]
+    )
+
+    return {
+        "player": data["body"]["longName"],
+        "team": data["body"]["team"],
+        "position": data["body"]["pos"],
+        "week": week,
+        "projected_points": round(projected_points, 1),
+        "rushing": rushing,
+        "passing": passing,
+        "receiving": receiving,
+    }
+
+@app.get("/projection/team/{team_id}/{week}")
+def fetch_team_projection(team_id: str, week: int):
+    data = get_team_projection(team_id)
+
+    # The team response is similar to the player response — it has
+    # body.projections with weekly entries keyed like "Week_17".
+    projections = data["body"]["projections"]
+    week_key = f"Week_{week}"
+    week_data = next((p for p in projections if p["week"] == week_key), None)
+
+    if week_data is None:
+        return {"error": f"No projection found for week {week}"}
+
+    # All values come back as strings, so convert to float.
+    def_td      = float(week_data.get("defTD", "0"))        # if stat is missing, return 0
+    return_td   = float(week_data.get("returnTD", "0"))
+    sacks       = float(week_data.get("sacks", "0"))
+    ints        = float(week_data.get("interceptions", "0"))
+    fum_rec     = float(week_data.get("fumbleRecoveries", "0"))
+    safeties    = float(week_data.get("safeties", "0"))
+    block_kick  = float(week_data.get("blockKick", "0"))
+    pts_against = float(week_data.get("ptsAgainst", "0"))
+
+    projected_points = (
+        def_td     * DEF_SCORING["def_td"]
+        + return_td  * DEF_SCORING["return_td"]
+        + sacks      * DEF_SCORING["sack"]
+        + ints       * DEF_SCORING["interception"]
+        + fum_rec    * DEF_SCORING["fum_rec"]
+        + safeties   * DEF_SCORING["safety"]
+        + block_kick * DEF_SCORING["block_kick"]
+        + _pts_allowed_score(pts_against)
+    )
+
+    return {
+        "team": team_id,
+        "week": week,
+        "projected_points": round(projected_points, 1),
+        "defTD": def_td,
+        "returnTD": return_td,
+        "sacks": sacks,
+        "interceptions": ints,
+        "fumbleRecoveries": fum_rec,
+        "safeties": safeties,
+        "blockKick": block_kick,
+        "ptsAgainst": pts_against,
+    }
+
