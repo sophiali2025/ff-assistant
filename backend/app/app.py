@@ -13,6 +13,17 @@ from services.tank01 import get_player_projection, get_team_projection
 with open("sleeper_all_players.txt", "r") as f:
     sleeper_all_players = json.load(f)
 
+# Load the sleeper_id -> tank01_id mapping so we can accept Sleeper
+# player IDs in our routes and translate them for Tank01 calls.
+player_id_map = {}
+with open("../player_id_mappings.txt", "r") as f:
+    for line in f:
+        line = line.strip()
+        if not line:
+            continue
+        sleeper_id, tank01_id = line.split(":")
+        player_id_map[sleeper_id] = tank01_id
+
 @app.get("/player/{player_id}")
 def get_player(player_id: str):
     return sleeper_all_players.get(player_id)
@@ -125,7 +136,12 @@ def _pts_allowed_score(pts_against: float) -> float:
 
 @app.get("/projection/{player_id}/{week}")
 def fetch_projection(player_id: str, week: int):
-    data = get_player_projection(player_id)
+    # player_id is a Sleeper ID — look up the Tank01 ID from the mapping.
+    tank01_id = player_id_map.get(player_id)
+    if tank01_id is None:
+        return {"error": f"No Tank01 mapping found for Sleeper player_id {player_id}"}
+
+    data = get_player_projection(tank01_id)
 
     # The response has body.projections — an array of weekly stats.
     # Each entry has a "week" field like "Week_17". We find the one
