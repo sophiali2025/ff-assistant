@@ -188,7 +188,12 @@ def fetch_projection(player_id: str, week: int):
 
 @app.get("/projection/team/{team_id}/{week}")
 def fetch_team_projection(team_id: str, week: int):
-    data = get_team_projection(team_id)
+    # team_id is a Sleeper team abbreviation — look up the Tank01 team ID.
+    tank01_team_id = player_id_map.get(team_id)
+    if tank01_team_id is None:
+        return {"error": f"No Tank01 mapping found for team {team_id}"}
+
+    data = get_team_projection(tank01_team_id)
 
     # The team response is similar to the player response — it has
     # body.projections with weekly entries keyed like "Week_17".
