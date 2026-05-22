@@ -10,6 +10,10 @@ const LEAGUE_ID = "1267619828559007744";
 const WEEK = 17
 const ROSTER_ID = 5
 
+// Toggle this to enable/disable projection API calls.
+// Set to false to avoid burning API calls during development.
+const PROJECTIONS_ENABLED = false;
+
 // --- What is fetch? ---
 // fetch() is built into JavaScript. It makes HTTP requests (like
 // visiting a URL in your browser, but from code). It returns a
@@ -41,30 +45,40 @@ export async function fetchMatchup() {
   if (!oppResponse.ok) throw new Error(`Failed to fetch opponent matchup: ${oppResponse.status}`);
   const oppMatchup = await oppResponse.json();
 
-  // 3. get opponent's team name and both teams' projected totals
-  const [oppTeamResponse, myProjResponse, oppProjResponse] = await Promise.all([
-    fetch(`${API_URL}/team/${LEAGUE_ID}/roster/${oppMatchup.roster_id}`),
-    fetch(`${API_URL}/projection/roster/${LEAGUE_ID}/${ROSTER_ID}/${WEEK}`),
-    fetch(`${API_URL}/projection/roster/${LEAGUE_ID}/${oppMatchup.roster_id}/${WEEK}`),
-  ]);
+  // 3. get opponent's team name and (if enabled) both teams' projected totals
+  let myProjected = 0;
+  let oppProjected = 0;
+
+  if (PROJECTIONS_ENABLED) {
+    const [oppTeamResponse, myProjResponse, oppProjResponse] = await Promise.all([
+      fetch(`${API_URL}/team/${LEAGUE_ID}/roster/${oppMatchup.roster_id}`),
+      fetch(`${API_URL}/projection/roster/${LEAGUE_ID}/${ROSTER_ID}/${WEEK}`),
+      fetch(`${API_URL}/projection/roster/${LEAGUE_ID}/${oppMatchup.roster_id}/${WEEK}`),
+    ]);
+    if (!oppTeamResponse.ok) throw new Error(`Failed to fetch opponent team: ${oppTeamResponse.status}`);
+    const oppTeam = await oppTeamResponse.json();
+    const myProj = await myProjResponse.json();
+    const oppProj = await oppProjResponse.json();
+    myProjected = myProj.projected_points ?? 0;
+    oppProjected = oppProj.projected_points ?? 0;
+
+    return {
+      week: WEEK,
+      my_team: { name: myTeam.team_name, points: myMatchup.points, projected_points: myProjected },
+      opponent: { name: oppTeam.team_name, points: oppMatchup.points, projected_points: oppProjected },
+    };
+  }
+
+  // Projections disabled — still need opponent team name
+  const oppTeamResponse = await fetch(`${API_URL}/team/${LEAGUE_ID}/roster/${oppMatchup.roster_id}`);
   if (!oppTeamResponse.ok) throw new Error(`Failed to fetch opponent team: ${oppTeamResponse.status}`);
   const oppTeam = await oppTeamResponse.json();
-  const myProj = await myProjResponse.json();
-  const oppProj = await oppProjResponse.json();
 
   // 4. combine into the shape our WeeklyMatch component expects
   return {
     week: WEEK,
-    my_team: {
-      name: myTeam.team_name,
-      points: myMatchup.points,
-      projected_points: myProj.projected_points ?? 0,
-    },
-    opponent: {
-      name: oppTeam.team_name,
-      points: oppMatchup.points,
-      projected_points: oppProj.projected_points ?? 0,
-    },
+    my_team: { name: myTeam.team_name, points: myMatchup.points, projected_points: 0 },
+    opponent: { name: oppTeam.team_name, points: oppMatchup.points, projected_points: 0 },
   };
 }
 
@@ -100,25 +114,25 @@ export async function fetchRoster() {
     detailsById[id] = playerDetails[i];
   });
 
-  // 3.5. Fetch projected points for all players in parallel.
-  // For DEF players, call the team projection endpoint using
-  // the team abbreviation. For everyone else, use the player endpoint.
-  const projectionResponses = await Promise.all(
-    roster.players.map((id) => {
-      const detail = detailsById[id];
-      if (detail.position === "DEF") {
-        return fetch(`${API_URL}/projection/team/${detail.team}/${WEEK}`);
-      }
-      return fetch(`${API_URL}/projection/${id}/${WEEK}`);
-    })
-  );
-  const projections = await Promise.all(
-    projectionResponses.map((r) => r.json())
-  );
+  // 3.5. Fetch projected points for all players in parallel (if enabled).
   const projectionsById = {};
-  roster.players.forEach((id, i) => {
-    projectionsById[id] = projections[i]?.projected_points ?? 0;
-  });
+  if (PROJECTIONS_ENABLED) {
+    const projectionResponses = await Promise.all(
+      roster.players.map((id) => {
+        const detail = detailsById[id];
+        if (detail.position === "DEF") {
+          return fetch(`${API_URL}/projection/team/${detail.team}/${WEEK}`);
+        }
+        return fetch(`${API_URL}/projection/${id}/${WEEK}`);
+      })
+    );
+    const projections = await Promise.all(
+      projectionResponses.map((r) => r.json())
+    );
+    roster.players.forEach((id, i) => {
+      projectionsById[id] = projections[i]?.projected_points ?? 0;
+    });
+  }
 
   // 4. Build the starters list (in order) with correct slots.
   // roster.starters is ordered: positions 1-6 use the player's
