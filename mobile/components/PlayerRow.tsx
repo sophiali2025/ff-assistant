@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
 // --- Slot vs Position ---
 // A player has a `position` (what they play: QB, RB, WR, TE, K, DEF)
@@ -31,11 +31,14 @@ type PlayerRowProps = {
   status: string;
   actualPoints: number;
   projectedPoints: number;
+  selected?: boolean;
+  onPress?: () => void;
 };
 
-export default function PlayerRow({ slot, name, status, actualPoints, projectedPoints }: PlayerRowProps) {
+export default function PlayerRow({ slot, name, status, actualPoints, projectedPoints, selected, onPress }: PlayerRowProps) {
   return (
-    <View style={styles.row}>
+    <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
+    <View style={[styles.row, selected && styles.selectedRow]}>
       {/* Slot badge — color depends on the roster slot */}
       <View style={[styles.badge, { backgroundColor: SLOT_COLORS[slot] || '#9EA5A9' }]}>
         <Text style={styles.badgeText}>{slot}</Text>
@@ -59,6 +62,7 @@ export default function PlayerRow({ slot, name, status, actualPoints, projectedP
         <Text style={styles.projectedPoints}>{projectedPoints.toFixed(1)}</Text>
       </View>
     </View>
+    </TouchableOpacity>
   );
 }
 
@@ -78,6 +82,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(161, 196, 249, 0.2)', // subtle separator line
+  },
+  selectedRow: {
+    backgroundColor: '#67558F',
   },
   badge: {
     width: 35,

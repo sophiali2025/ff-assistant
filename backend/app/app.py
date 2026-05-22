@@ -84,7 +84,7 @@ def fetch_roster(league_id: str, user_id: str):
     return my_roster
 
 
-# --- Tank01 API routes ---
+# --- Hardcoded Stuff ---
 
 # League scoring settings (hardcoded for now).
 # These come from the Sleeper league settings screenshots.
@@ -138,6 +138,7 @@ def _pts_allowed_score(pts_against: float) -> float:
             return score
     return -4  # fallback: treat as 35+
 
+# --- Tank01 API routes ---
 @app.get("/projection/{player_id}/{week}")
 def fetch_projection(player_id: str, week: int):
     # player_id is a Sleeper ID — look up the Tank01 ID from the mapping.

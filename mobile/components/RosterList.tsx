@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import PlayerRow from './PlayerRow';
 
@@ -15,6 +16,10 @@ type RosterListProps = {
 };
 
 export default function RosterList({ players }: RosterListProps) {
+  // Track which player is selected. null = no one selected.
+  // Tapping the same player again deselects them.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>roster</Text>
@@ -44,6 +49,10 @@ export default function RosterList({ players }: RosterListProps) {
             status={player.status}
             actualPoints={player.points_this_week}
             projectedPoints={player.projected_points}
+            selected={player.player_id === selectedId}
+            onPress={() => setSelectedId(
+              player.player_id === selectedId ? null : player.player_id
+            )}
           />
         ))}
       </ScrollView>
