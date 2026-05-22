@@ -3,7 +3,8 @@ from fastapi import FastAPI
 from .mock_data import MOCK_ROSTER, MOCK_MATCHUP
 from main import app
 from services.sleeper import get_user, get_rosters, get_matchups, get_users_in_league
-from services.tank01 import get_player_projection, get_team_projection
+from services.tank01 import get_player_projection_t1, get_team_projection_t1
+from services.fantasypros import get_player_projection
 
 # --- API routes ---
 
@@ -15,14 +16,24 @@ with open("sleeper_all_players.txt", "r") as f:
 
 # Load the sleeper_id -> tank01_id mapping so we can accept Sleeper
 # player IDs in our routes and translate them for Tank01 calls.
-player_id_map = {}
-with open("../player_id_mappings.txt", "r") as f:
+sleepr_tank01_map = {}
+with open("sleeper_tank01_mappings.txt", "r") as f:
     for line in f:
         line = line.strip()
         if not line:
             continue
         sleeper_id, tank01_id = line.split(":")
-        player_id_map[sleeper_id] = tank01_id
+        sleepr_tank01_map[sleeper_id] = tank01_id
+
+# Load the sleeper_id -> fantasypros_id mapping.
+sleeper_fp_map = {}
+with open("sleeper_fp_mappings.txt", "r") as f:
+    for line in f:
+        line = line.strip()
+        if not line:
+            continue
+        sleeper_id, fp_id = line.split(":")
+        sleeper_fp_map[sleeper_id] = fp_id
 
 @app.get("/player/{player_id}")
 def get_player(player_id: str):
@@ -83,8 +94,44 @@ def fetch_roster(league_id: str, user_id: str):
     my_roster = next(r for r in rosters if r["owner_id"] == user_id)
     return my_roster
 
+# --- Fantasy Pros API routes ---
+@app.get("/projection/{player_id}/{week}")
+def fetch_projection(player_id: str, week: int):
+    # player_id is a Sleeper ID — look up the FantasyPros ID from the mapping.
+    fp_id = sleeper_fp_map.get(player_id)
+    if fp_id is None:
+        return {"projected_points": 0, "error": f"No FantasyPros mapping for {player_id}"}
 
-# --- Hardcoded Stuff ---
+    try:
+        data = get_player_projection(week, fp_id)
+        player = data["players"][0]
+        return {
+            "projected_points": player["stats"]["points_ppr"],
+        }
+    except Exception as e:
+        return {"projected_points": 0, "error": str(e)}
+    
+@app.get("/projection/roster/{league_id}/{roster_id}/{week}")
+def fetch_all_starters_projection(league_id: str, roster_id: int, week: int):
+    rosters = get_rosters(league_id)
+    roster = next((r for r in rosters if r["roster_id"] == roster_id), None)
+    if roster is None:
+        return {"projected_points": 0, "error": f"No roster found for roster_id {roster_id}"}
+
+    total_projected = 0.0
+
+    for player_id in roster["starters"]:
+        result = fetch_projection(player_id, week)
+        if "projected_points" in result:
+            total_projected += result["projected_points"]
+
+    return {
+        "roster_id": roster_id,
+        "week": week,
+        "projected_points": round(total_projected, 2),
+    }
+
+# --- Tank01 API routes ---
 
 # League scoring settings (hardcoded for now).
 # These come from the Sleeper league settings screenshots.
@@ -138,15 +185,14 @@ def _pts_allowed_score(pts_against: float) -> float:
             return score
     return -4  # fallback: treat as 35+
 
-# --- Tank01 API routes ---
-@app.get("/projection/{player_id}/{week}")
-def fetch_projection(player_id: str, week: int):
+@app.get("/projection_t1/{player_id}/{week}")
+def fetch_projection_t1(player_id: str, week: int):
     # player_id is a Sleeper ID — look up the Tank01 ID from the mapping.
-    tank01_id = player_id_map.get(player_id)
+    tank01_id = sleepr_tank01_map.get(player_id)
     if tank01_id is None:
         return {"error": f"No Tank01 mapping found for Sleeper player_id {player_id}"}
 
-    data = get_player_projection(tank01_id)
+    data = get_player_projection_t1(tank01_id)
 
     # The response has body.projections — an array of weekly stats.
     # Each entry has a "week" field like "Week_17". We find the one
@@ -210,14 +256,14 @@ def fetch_projection(player_id: str, week: int):
         "receiving": receiving,
     }
 
-@app.get("/projection/team/{team_id}/{week}")
-def fetch_team_projection(team_id: str, week: int):
+@app.get("/projection_t1/team/{team_id}/{week}")
+def fetch_team_projection_t1(team_id: str, week: int):
     # team_id is a Sleeper team abbreviation — look up the Tank01 team ID.
-    tank01_team_id = player_id_map.get(team_id)
+    tank01_team_id = sleepr_tank01_map.get(team_id)
     if tank01_team_id is None:
         return {"error": f"No Tank01 mapping found for team {team_id}"}
 
-    data = get_team_projection(tank01_team_id)
+    data = get_team_projection_t1(tank01_team_id)
 
     # The team response is similar to the player response — it has
     # body.projections with weekly entries keyed like "Week_17".
@@ -263,8 +309,8 @@ def fetch_team_projection(team_id: str, week: int):
         "ptsAgainst": pts_against,
     }
 
-@app.get("/projection/roster/{league_id}/{roster_id}/{week}")
-def fetch_entire_roster_projection(league_id: str, roster_id: int, week: int):
+@app.get("/projection_t1/roster/{league_id}/{roster_id}/{week}")
+def fetch_entire_roster_projection_t1(league_id: str, roster_id: int, week: int):
     rosters = get_rosters(league_id)
     roster = next((r for r in rosters if r["roster_id"] == roster_id), None)
     if roster is None:
@@ -278,9 +324,9 @@ def fetch_entire_roster_projection(league_id: str, roster_id: int, week: int):
             continue
 
         if player.get("position") == "DEF":
-            result = fetch_team_projection(player.get("team"), week)
+            result = fetch_team_projection_t1(player.get("team"), week)
         else:
-            result = fetch_projection(player_id, week)
+            result = fetch_projection_t1(player_id, week)
 
         if "projected_points" in result:
             total_projected += result["projected_points"]

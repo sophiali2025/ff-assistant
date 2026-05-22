@@ -14,7 +14,7 @@ TANK01_HEADERS = {
     "x-rapidapi-key": os.environ.get("RAPID_API_KEY"),
 }
 
-def get_player_projection(player_id: str):
+def get_player_projection_t1(player_id: str):
     response = httpx.get(
         f"{TANK01_URL}/getNFLProjections?playerID={player_id}&itemFormat=list&twoPointConversions=2&passYards=.04&passTD=4&passInterceptions=-1&pointsPerReception=1&rushYards=.1&rushTD=6&fumbles=-2&receivingYards=.1&receivingTD=6&fgMade=3&fgMissed=-1&xpMade=1&xpMissed=-1",
         headers=TANK01_HEADERS,
@@ -23,7 +23,7 @@ def get_player_projection(player_id: str):
 
     return response.json()
 
-def get_team_projection(team_id: str):
+def get_team_projection_t1(team_id: str):
     response = httpx.get(
         f"{TANK01_URL}/getNFLProjections?teamID={team_id}&itemFormat=list&twoPointConversions=2&passYards=.04&passTD=4&passInterceptions=-1&pointsPerReception=1&rushYards=.1&rushTD=6&fumbles=-2&receivingYards=.1&receivingTD=6&fgMade=3&fgMissed=-1&xpMade=1&xpMissed=-1",
         headers=TANK01_HEADERS,
