@@ -55,8 +55,8 @@ export default function PlayerRow({ slot, name, status, actualPoints, projectedP
 
       {/* Right section: points */}
       <View style={styles.points}>
-        <Text style={styles.actualPoints}>{actualPoints}</Text>
-        <Text style={styles.projectedPoints}>{projectedPoints}</Text>
+        <Text style={styles.actualPoints}>{actualPoints.toFixed(1)}</Text>
+        <Text style={styles.projectedPoints}>{projectedPoints.toFixed(1)}</Text>
       </View>
     </View>
   );

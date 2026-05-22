@@ -99,6 +99,10 @@ SCORING = {
     "rec_td":    6,
     "two_pt":    2,
     "fum_lost":  -2,
+    "fg_made":   3,
+    "fg_missed": -1,
+    "xp_made":   1,
+    "xp_missed": -1,
 }
 
 # Defense/Special Teams scoring settings (from league settings).
@@ -153,6 +157,25 @@ def fetch_projection(player_id: str, week: int):
     if week_data is None:
         return {"error": f"No projection found for week {week}"}
 
+    # if kicker
+    pos = data["body"]["pos"]
+    if pos == "PK":
+        kicking = week_data["Kicking"]
+        projected_points = (
+            float(kicking["fgMade"]) * SCORING["fg_made"]
+            + float(kicking["fgMissed"]) * SCORING["fg_missed"]
+            + float(kicking["xpMade"]) * SCORING["xp_made"]
+            + float(kicking["xpMissed"]) * SCORING["xp_missed"]
+        )
+        return {
+            "player": data["body"]["longName"],
+            "team": data["body"]["team"],
+            "position": pos,
+            "week": week,
+            "projected_points": round(projected_points, 1),
+            "kicking": kicking,
+        }
+
     # All values from Tank01 are strings, so we convert to float.
     passing = week_data["Passing"]
     rushing = week_data["Rushing"]
@@ -178,7 +201,7 @@ def fetch_projection(player_id: str, week: int):
     return {
         "player": data["body"]["longName"],
         "team": data["body"]["team"],
-        "position": data["body"]["pos"],
+        "position": pos,
         "week": week,
         "projected_points": round(projected_points, 1),
         "rushing": rushing,
@@ -239,3 +262,30 @@ def fetch_team_projection(team_id: str, week: int):
         "ptsAgainst": pts_against,
     }
 
+@app.get("/projection/roster/{league_id}/{roster_id}/{week}")
+def fetch_entire_roster_projection(league_id: str, roster_id: int, week: int):
+    rosters = get_rosters(league_id)
+    roster = next((r for r in rosters if r["roster_id"] == roster_id), None)
+    if roster is None:
+        return {"error": f"No roster found for roster_id {roster_id}"}
+
+    total_projected = 0.0
+
+    for player_id in roster["starters"]:
+        player = sleeper_all_players.get(player_id)
+        if player is None:
+            continue
+
+        if player.get("position") == "DEF":
+            result = fetch_team_projection(player.get("team"), week)
+        else:
+            result = fetch_projection(player_id, week)
+
+        if "projected_points" in result:
+            total_projected += result["projected_points"]
+
+    return {
+        "roster_id": roster_id,
+        "week": week,
+        "projected_points": round(total_projected, 2),
+    }

@@ -27,10 +27,10 @@ export default function TeamScore({ name, actualPoints, projectedPoints, alignRi
         {name}
       </Text>
       <Text style={[styles.actual, alignRight && styles.textRight]}>
-        {actualPoints}
+        {actualPoints.toFixed(2)}
       </Text>
       <Text style={[styles.projected, alignRight && styles.textRight]}>
-        {projectedPoints}
+        {projectedPoints.toFixed(2)}
       </Text>
     </View>
   );

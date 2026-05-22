@@ -41,10 +41,16 @@ export async function fetchMatchup() {
   if (!oppResponse.ok) throw new Error(`Failed to fetch opponent matchup: ${oppResponse.status}`);
   const oppMatchup = await oppResponse.json();
 
-  // 3. get opponent's team name (needs roster_id from step 2)
-  const oppTeamResponse = await fetch(`${API_URL}/team/${LEAGUE_ID}/roster/${oppMatchup.roster_id}`);
+  // 3. get opponent's team name and both teams' projected totals
+  const [oppTeamResponse, myProjResponse, oppProjResponse] = await Promise.all([
+    fetch(`${API_URL}/team/${LEAGUE_ID}/roster/${oppMatchup.roster_id}`),
+    fetch(`${API_URL}/projection/roster/${LEAGUE_ID}/${ROSTER_ID}/${WEEK}`),
+    fetch(`${API_URL}/projection/roster/${LEAGUE_ID}/${oppMatchup.roster_id}/${WEEK}`),
+  ]);
   if (!oppTeamResponse.ok) throw new Error(`Failed to fetch opponent team: ${oppTeamResponse.status}`);
   const oppTeam = await oppTeamResponse.json();
+  const myProj = await myProjResponse.json();
+  const oppProj = await oppProjResponse.json();
 
   // 4. combine into the shape our WeeklyMatch component expects
   return {
@@ -52,10 +58,12 @@ export async function fetchMatchup() {
     my_team: {
       name: myTeam.team_name,
       points: myMatchup.points,
+      projected_points: myProj.projected_points ?? 0,
     },
     opponent: {
       name: oppTeam.team_name,
       points: oppMatchup.points,
+      projected_points: oppProj.projected_points ?? 0,
     },
   };
 }
@@ -84,12 +92,32 @@ export async function fetchRoster() {
     playerResponses.map((r) => r.json())
   );
 
-  // 3. Build a lookup: player_id → player details (player_id is 
+  // 3. Build a lookup: player_id → player details (player_id is
   // now a key), so we can quickly find any player's info without
   // looping each time.
   const detailsById = {};
   roster.players.forEach((id, i) => {
     detailsById[id] = playerDetails[i];
+  });
+
+  // 3.5. Fetch projected points for all players in parallel.
+  // For DEF players, call the team projection endpoint using
+  // the team abbreviation. For everyone else, use the player endpoint.
+  const projectionResponses = await Promise.all(
+    roster.players.map((id) => {
+      const detail = detailsById[id];
+      if (detail.position === "DEF") {
+        return fetch(`${API_URL}/projection/team/${detail.team}/${WEEK}`);
+      }
+      return fetch(`${API_URL}/projection/${id}/${WEEK}`);
+    })
+  );
+  const projections = await Promise.all(
+    projectionResponses.map((r) => r.json())
+  );
+  const projectionsById = {};
+  roster.players.forEach((id, i) => {
+    projectionsById[id] = projections[i]?.projected_points ?? 0;
   });
 
   // 4. Build the starters list (in order) with correct slots.
@@ -111,7 +139,7 @@ export async function fetchRoster() {
       slot,
       status: detail.injury_status?.toLowerCase() ?? "active",
       points_this_week: matchup.players_points?.[id] ?? 0,
-      projected_points: 0,
+      projected_points: projectionsById[id] ?? 0,
     };
   });
 
@@ -127,7 +155,7 @@ export async function fetchRoster() {
         slot: "BN",
         status: detail.injury_status?.toLowerCase() ?? "active",
         points_this_week: matchup.players_points?.[id] ?? 0,
-        projected_points: 0,
+        projected_points: projectionsById[id] ?? 0,
       };
     });
 
