@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Fantasy Football Assistant — a mobile app that helps fantasy football players view rosters, get AI-powered start/sit recommendations, and track matchups. Integrates with Sleeper (fantasy football platform), Anthropic Claude (AI recommendations), and Tenor (GIFs).
+Fantasy Football Assistant — a mobile app that helps fantasy football players view rosters and matchups, get AI-powered start/sit recommendations, trade analyzation, and waiver pickup advice. Integrates with Sleeper (fantasy football platform), Fantasy Pros (fantasy football data), and Anthropic Claude (AI recommendations).
 
 ## Monorepo Structure
 
@@ -50,7 +50,6 @@ Route groups:
 - **Framework**: FastAPI with Pydantic schemas
 - **Entry point**: `main.py` → runs `app/app.py:app`
 - **Schemas**: Defined in `app/schemas.py` (Player, TeamScore, Matchup)
-- **Data**: Currently uses mock data from `app/mock_data.py`
 - **Service layer**: `services/` contains integrations (sleeper.py, claude.py, tenor.py)
 - **Routers**: `routers/` has modular route handlers (leagues, startsit, gifs)
 

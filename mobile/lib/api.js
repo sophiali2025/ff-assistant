@@ -172,3 +172,9 @@ export async function fetchRoster() {
   // 6. Return starters first, then bench — that's the natural roster order.
   return [...starters, ...bench];
 }
+
+export async function fetchPlayerNews(playerId) {
+  const response = await fetch(`${API_URL}/news/${playerId}`);
+  const data = await response.json();
+  return data["news impact"] ?? data["recent news"] ?? "no news";
+}

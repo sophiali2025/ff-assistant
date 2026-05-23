@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import PlayerRow from './PlayerRow';
+import { fetchPlayerNews } from '../lib/api';
 
 type Player = {
   player_id: string;
@@ -19,6 +20,19 @@ export default function RosterList({ players }: RosterListProps) {
   // Track which player is selected. null = no one selected.
   // Tapping the same player again deselects them.
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [news, setNews] = useState<string | null>(null);
+
+  // When a player is selected, fetch their latest news from the backend.
+  useEffect(() => {
+    if (selectedId === null) {
+      setNews(null);
+      return;
+    }
+    setNews(null); // show "loading..." while fetching
+    fetchPlayerNews(selectedId)
+      .then(setNews)
+      .catch(() => setNews('no news available'));
+  }, [selectedId]);
 
   return (
     <View style={styles.container}>
@@ -41,7 +55,7 @@ export default function RosterList({ players }: RosterListProps) {
           removed. It should be unique per item — here we use the
           player's name since each name is unique in our data.
         */}
-        {players.map((player) => (
+        {players.map((player, index) => (
           <PlayerRow
             key={player.player_id}
             slot={player.slot}
@@ -50,6 +64,9 @@ export default function RosterList({ players }: RosterListProps) {
             actualPoints={player.points_this_week}
             projectedPoints={player.projected_points}
             selected={player.player_id === selectedId}
+            isFirst={index === 0}
+            isLast={index === players.length - 1}
+            news={player.player_id === selectedId ? news : undefined}
             onPress={() => setSelectedId(
               player.player_id === selectedId ? null : player.player_id
             )}
