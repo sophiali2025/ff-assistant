@@ -4,7 +4,7 @@ from .mock_data import MOCK_ROSTER, MOCK_MATCHUP
 from main import app
 from services.sleeper import get_user, get_rosters, get_matchups, get_users_in_league
 from services.tank01 import get_player_projection_t1, get_team_projection_t1
-from services.fantasypros import get_player_projection
+from services.fantasypros import get_player_projection, get_player_news
 
 # --- API routes ---
 
@@ -130,6 +130,21 @@ def fetch_all_starters_projection(league_id: str, roster_id: int, week: int):
         "week": week,
         "projected_points": round(total_projected, 2),
     }
+
+@app.get("/news/{player_id}")
+def fetch_most_recent_player_news(player_id: str):
+    fp_id = sleeper_fp_map.get(player_id)
+    if fp_id is None:
+        return {"recent news": "no news", "error": f"No FantasyPros mapping for {player_id}"}
+    
+    try:
+        data = get_player_news(fp_id)
+        recent_news = data["items"][0]
+        return {
+            "news impact": recent_news["impact"],
+        }
+    except Exception as e:
+        return {"recent news": "no news", "error": str(e)}
 
 # --- Tank01 API routes ---
 

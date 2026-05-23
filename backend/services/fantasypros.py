@@ -20,3 +20,12 @@ def get_player_projection(week: int, player_id: str):
     response.raise_for_status()
 
     return response.json()
+
+def get_player_news(player_id: str):
+    response = httpx.get(
+        f"{FANTASY_PROS_URL}/nfl/news?fpid={player_id}",
+        headers=FANTASY_PROS_HEADERS,
+    )
+    response.raise_for_status()
+
+    return response.json()
