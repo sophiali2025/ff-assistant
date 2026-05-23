@@ -66,7 +66,7 @@ export default function RosterList({ players }: RosterListProps) {
             selected={player.player_id === selectedId}
             isFirst={index === 0}
             isLast={index === players.length - 1}
-            news={player.player_id === selectedId ? news : undefined}
+            news={player.player_id === selectedId ? (news ?? undefined) : undefined}
             onPress={() => setSelectedId(
               player.player_id === selectedId ? null : player.player_id
             )}
