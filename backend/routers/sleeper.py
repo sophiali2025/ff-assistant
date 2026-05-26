@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from services.sleeper import get_user, get_rosters, get_matchups, get_users_in_league
+from services.sleeper import get_user, get_rosters, get_matchups, get_users_in_league, get_league
 from app.data import sleeper_all_players
 
 router = APIRouter()
@@ -17,6 +17,16 @@ def fetch_user(username: str):
 def get_user_id(username: str):
     user = get_user(username)
     return {"user_id": user["user_id"]}
+
+# league info
+@router.get("/league/scoring_settings/{league_id}")
+def fetch_scoring_settings(league_id: str):
+    league = get_league(league_id)
+    return {"scoring_settings": league["scoring_settings"]}
+
+@router.get("/league/{league_id}")
+def fetch_league(league_id: str):
+    return get_league(league_id)
 
 # matchup info
 @router.get("/matchup/{league_id}/{week}/{roster_id}")

@@ -38,6 +38,12 @@ def get_matchups(league_id: str, week: int):
 
     return response.json()
 
+def get_league(league_id: str):
+    response = httpx.get(f"{SLEEPER_BASE_URL}/league/{league_id}")
+    response.raise_for_status()
+
+    return response.json()
+
 def get_users_in_league(league_id: str):
     response = httpx.get(f"{SLEEPER_BASE_URL}/league/{league_id}/users")
     response.raise_for_status()
