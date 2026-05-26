@@ -21,6 +21,18 @@ def get_player_projection(week: int, player_id: str):
 
     return response.json()
 
+def get_batch_projections(week: int, player_ids: list[str]):
+    """Fetch projections for multiple players in a single API call.
+    player_ids is a list of FantasyPros IDs."""
+    ids_str = ":".join(player_ids)
+    response = httpx.get(
+        f"{FANTASY_PROS_URL}/nfl/{SEASON}/projections?week={week}&players={ids_str}&position=ALL",
+        headers=FANTASY_PROS_HEADERS,
+    )
+    response.raise_for_status()
+
+    return response.json()
+
 def get_player_news(player_id: str):
     response = httpx.get(
         f"{FANTASY_PROS_URL}/nfl/news?fpid={player_id}",

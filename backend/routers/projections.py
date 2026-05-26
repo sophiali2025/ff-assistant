@@ -1,12 +1,70 @@
 from fastapi import APIRouter
 from services.sleeper import get_rosters
-from services.fantasypros import get_player_projection, get_player_news
+from services.fantasypros import get_player_projection, get_batch_projections, get_player_news
 from services.tank01 import get_player_projection_t1, get_team_projection_t1
 from app.data import sleeper_fp_map, sleepr_tank01_map, sleeper_all_players
 
 router = APIRouter()
 
 # --- Fantasy Pros API routes ---
+
+# Batch route must come before the single-player route, because
+# /projection/{player_id}/{week} would match "batch" as a player_id.
+@router.get("/projection/batch/{week}")
+def fetch_batch_projections(week: int, sleeper_ids: str):
+    """Fetch projections for multiple players in one API call.
+    sleeper_ids is a colon-separated string of Sleeper player IDs."""
+    id_list = sleeper_ids.split(":")
+
+    # Convert Sleeper IDs to FantasyPros IDs, skipping any without a mapping.
+    fp_ids = []
+    sleeper_to_fp = {}
+    for sid in id_list:
+        fp_id = sleeper_fp_map.get(sid)
+        if fp_id:
+            fp_ids.append(fp_id)
+            sleeper_to_fp[fp_id] = sid
+
+    if not fp_ids:
+        return {"projections": {sid: 0 for sid in id_list}}
+
+    try:
+        data = get_batch_projections(week, fp_ids)
+        # Build a lookup from fp_id -> projected points
+        result = {}
+        for player in data.get("players", []):
+            fp_id = str(player["fpid"])
+            pts = player.get("stats", {}).get("points_ppr", 0)
+            sid = sleeper_to_fp.get(fp_id)
+            if sid:
+                result[sid] = pts
+
+        # Fill in 0 for any player we couldn't get projections for
+        for sid in id_list:
+            if sid not in result:
+                result[sid] = 0
+
+        return {"projections": result}
+    except Exception as e:
+        return {"projections": {sid: 0 for sid in id_list}, "error": str(e)}
+
+@router.get("/projection/roster/{league_id}/{roster_id}/{week}")
+def fetch_all_starters_projection(league_id: str, roster_id: int, week: int):
+    rosters = get_rosters(league_id)
+    roster = next((r for r in rosters if r["roster_id"] == roster_id), None)
+    if roster is None:
+        return {"projected_points": 0, "error": f"No roster found for roster_id {roster_id}"}
+
+    # Batch all starters into one FantasyPros call
+    sleeper_ids = ":".join(roster["starters"])
+    batch = fetch_batch_projections(week, sleeper_ids)
+    total_projected = sum(batch["projections"].values())
+
+    return {
+        "roster_id": roster_id,
+        "week": week,
+        "projected_points": round(total_projected, 2),
+    }
 
 @router.get("/projection/{player_id}/{week}")
 def fetch_projection(player_id: str, week: int):
@@ -23,26 +81,6 @@ def fetch_projection(player_id: str, week: int):
         }
     except Exception as e:
         return {"projected_points": 0, "error": str(e)}
-
-@router.get("/projection/roster/{league_id}/{roster_id}/{week}")
-def fetch_all_starters_projection(league_id: str, roster_id: int, week: int):
-    rosters = get_rosters(league_id)
-    roster = next((r for r in rosters if r["roster_id"] == roster_id), None)
-    if roster is None:
-        return {"projected_points": 0, "error": f"No roster found for roster_id {roster_id}"}
-
-    total_projected = 0.0
-
-    for player_id in roster["starters"]:
-        result = fetch_projection(player_id, week)
-        if "projected_points" in result:
-            total_projected += result["projected_points"]
-
-    return {
-        "roster_id": roster_id,
-        "week": week,
-        "projected_points": round(total_projected, 2),
-    }
 
 @router.get("/news/{player_id}")
 def fetch_most_recent_player_news(player_id: str):

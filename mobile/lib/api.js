@@ -114,20 +114,15 @@ export async function fetchRoster() {
     detailsById[id] = playerDetails[i];
   });
 
-  // 3.5. Fetch projected points for all players in parallel (if enabled).
-  // All players (including DEF) go through /projection/{sleeper_id}/{week},
-  // which uses the FantasyPros API via the sleeper->fp mapping on the backend.
+  // 3.5. Fetch projected points for all players in a single batch call (if enabled).
+  // Sends all Sleeper IDs joined by ":" to /projection/batch/{week},
+  // which makes one FantasyPros API call instead of 15+ separate ones.
   const projectionsById = {};
   if (PROJECTIONS_ENABLED) {
-    const projectionResponses = await Promise.all(
-      roster.players.map((id) => fetch(`${API_URL}/projection/${id}/${WEEK}`))
-    );
-    const projections = await Promise.all(
-      projectionResponses.map((r) => r.json())
-    );
-    roster.players.forEach((id, i) => {
-      projectionsById[id] = projections[i]?.projected_points ?? 0;
-    });
+    const ids = roster.players.join(":");
+    const projResponse = await fetch(`${API_URL}/projection/batch/${WEEK}?sleeper_ids=${ids}`);
+    const projData = await projResponse.json();
+    Object.assign(projectionsById, projData.projections ?? {});
   }
 
   // 4. Build the starters list (in order) with correct slots.
