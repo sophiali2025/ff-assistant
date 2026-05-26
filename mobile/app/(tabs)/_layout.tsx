@@ -1,57 +1,47 @@
 import React from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { Link, Tabs } from 'expo-router';
-import { Pressable } from 'react-native';
-
-import Colors from '@/constants/Colors';
-import { useColorScheme } from '@/components/default/useColorScheme';
-import { useClientOnlyValue } from '@/components/default/useClientOnlyValue';
-
-// You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
-function TabBarIcon(props: {
-  name: React.ComponentProps<typeof FontAwesome>['name'];
-  color: string;
-}) {
-  return <FontAwesome size={28} style={{ marginBottom: -3 }} {...props} />;
-}
+import { Ionicons } from '@expo/vector-icons';
+import { Tabs } from 'expo-router';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        // Disable the static render of the header on web
-        // to prevent a hydration error in React Navigation v6.
+        tabBarActiveTintColor: '#A1C4F9',
+        tabBarInactiveTintColor: '#9F98EE',
+        tabBarStyle: {
+          backgroundColor: '#362C58',
+          borderTopColor: '#A1C4F9',
+          borderTopWidth: 1,
+        },
         headerShown: false,
       }}>
       <Tabs.Screen
-        name="index"
+        name="roster"
         options={{
-          title: 'Tab One',
-          tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
-          headerRight: () => (
-            <Link href="/modal" asChild>
-              <Pressable>
-                {({ pressed }) => (
-                  <FontAwesome
-                    name="info-circle"
-                    size={25}
-                    color={Colors[colorScheme ?? 'light'].text}
-                    style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
-                  />
-                )}
-              </Pressable>
-            </Link>
-          ),
+          title: 'Home',
+          tabBarIcon: ({ color }) => <Ionicons name="home-outline" size={24} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="two"
+        name="ai"
         options={{
-          title: 'Tab Two',
-          tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
+          title: 'AI',
+          tabBarIcon: ({ color }) => <Ionicons name="sparkles-outline" size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="startsit"
+        options={{
+          title: 'League',
+          tabBarIcon: ({ color }) => <Ionicons name="people-outline" size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="matchup"
+        options={{
+          title: 'News',
+          tabBarIcon: ({ color }) => <Ionicons name="document-text-outline" size={24} color={color} />,
         }}
       />
     </Tabs>
