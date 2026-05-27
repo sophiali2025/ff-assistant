@@ -19,9 +19,40 @@ def fetch_weekly_player_ranking(player_id: str, week: int):
     all_rankings = get_player_rankings(fp_id, week)
     return all_rankings["players"][0]["rank"]["ECR"]["PPR"]
 
+@router.get("/player_rankings/batch/{week}")
+def fetch_batch_player_rankings(week: int, sleeper_ids: str):
+    """Fetch weekly rankings for multiple players.
+    sleeper_ids is a colon-separated string of Sleeper player IDs."""
+    id_list = sleeper_ids.split(":")
+    rankings = {}
+    for player_id in id_list:
+        try:
+            result = fetch_weekly_player_ranking(player_id, week)
+            if isinstance(result, dict) and "error" in result:
+                rankings[player_id] = None
+            else:
+                rankings[player_id] = result
+        except Exception:
+            rankings[player_id] = None
+    return {"rankings": rankings}
+
 @router.get("/schedules")
 def fetch_schedule(week: int):
     return get_schedule(week)
+
+@router.get("/matchup_context/batch/{week}")
+def fetch_batch_matchup_context(week: int, sleeper_ids: str):
+    """Fetch matchup context for multiple players.
+    sleeper_ids is a colon-separated string of Sleeper player IDs."""
+    id_list = sleeper_ids.split(":")
+    contexts = {}
+    for player_id in id_list:
+        result = fetch_matchup_context(player_id, week)
+        if isinstance(result, dict) and "error" in result:
+            contexts[player_id] = None
+        else:
+            contexts[player_id] = result
+    return {"matchup_contexts": contexts}
 
 @router.get("/matchup_context/{player_id}/{week}")
 def fetch_matchup_context(player_id: str, week: int):
