@@ -41,3 +41,13 @@ def get_player_news(player_id: str):
     response.raise_for_status()
 
     return response.json()
+
+def get_player_rankings(player_id: str, week: int):
+    response = httpx.get(
+        f"{FANTASY_PROS_URL}/nfl/{SEASON}/rankings?player={player_id}&week={week}",
+        headers=FANTASY_PROS_HEADERS,
+        timeout=30.0,
+    )
+    response.raise_for_status()
+
+    return response.json()

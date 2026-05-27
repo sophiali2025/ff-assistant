@@ -5,3 +5,5 @@ __pycache__/
 node_modules/
 *.pyc
 .venv/
+backend/fantasy_pros_rankings.txt
+backend/espn.txt
