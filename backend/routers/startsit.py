@@ -74,8 +74,9 @@ def fetch_matchup_context(player_id: str, week: int):
     if game is None:
         return {"error": f"No game found for {team} in week {week}"}
 
-    # 3. Figure out the opponent.
-    opponent = game["away_team"] if game["home_team"] == team else game["home_team"]
+    # 3. Figure out the opponent and home/away status.
+    is_home = game["home_team"] == team
+    opponent = game["away_team"] if is_home else game["home_team"]
 
     # 4. Get the opponent defense's weekly ranking.
     #    In Sleeper, team defense IDs are the team abbreviation (e.g. "SEA").
@@ -89,6 +90,7 @@ def fetch_matchup_context(player_id: str, week: int):
         "player": f"{player.get('first_name')} {player.get('last_name')}",
         "team": team,
         "opponent": opponent,
+        "is_home": is_home,
         "week": week,
         "opponent_def_rank": def_ranking,
     }
