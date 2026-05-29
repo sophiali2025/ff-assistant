@@ -8,7 +8,7 @@ client = anthropic.AsyncAnthropic(
     api_key=os.environ["ANTHROPIC_API_KEY"]
 )
 
-async def ask_claude(prompt: str, max_tokens: int = 100):
+async def ask_claude(prompt: str, max_tokens: int):
     response = await client.messages.create(
         model="claude-sonnet-4-6",
         max_tokens=max_tokens,
