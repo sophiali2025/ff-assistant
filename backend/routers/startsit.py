@@ -9,6 +9,7 @@ router = APIRouter()
 def startsit_placeholder():
     return {"status": "startsit router ok"}
 
+# player rankings
 @router.get("/player_rankings/weekly/{player_id}/{week}")
 def fetch_weekly_player_ranking(player_id: str, week: int):
     # player_id is a Sleeper ID — look up the FantasyPros ID from the mapping.
@@ -36,10 +37,12 @@ def fetch_batch_player_rankings(week: int, sleeper_ids: str):
             rankings[player_id] = None
     return {"rankings": rankings}
 
+# schedule
 @router.get("/schedules")
 def fetch_schedule(week: int):
     return get_schedule(week)
 
+# players matchup info
 @router.get("/matchup_context/batch/{week}")
 def fetch_batch_matchup_context(week: int, sleeper_ids: str):
     """Fetch matchup context for multiple players.
@@ -88,9 +91,11 @@ def fetch_matchup_context(player_id: str, week: int):
 
     return {
         "player": f"{player.get('first_name')} {player.get('last_name')}",
+        "fpid": sleeper_fp_map.get(player_id),
         "team": team,
         "opponent": opponent,
         "is_home": is_home,
         "week": week,
         "opponent_def_rank": def_ranking,
     }
+
