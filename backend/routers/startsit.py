@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 from services.fantasypros import get_player_rankings
 from services.espn import get_schedule
+from routers.projections import fetch_projection, fetch_most_recent_player_news
 from app.data import sleeper_fp_map, sleeper_all_players
 
 router = APIRouter()
@@ -91,11 +92,64 @@ def fetch_matchup_context(player_id: str, week: int):
 
     return {
         "player": f"{player.get('first_name')} {player.get('last_name')}",
-        "fpid": sleeper_fp_map.get(player_id),
         "team": team,
         "opponent": opponent,
         "is_home": is_home,
         "week": week,
         "opponent_def_rank": def_ranking,
+    }
+
+# player info
+@router.get("/player_info/batch/{week}")
+def fetch_batch_player_info_basic(week: int, sleeper_ids: str):
+    """Fetch matchup context for multiple players.
+    sleeper_ids is a colon-separated string of Sleeper player IDs."""
+    id_list = sleeper_ids.split(":")
+    contexts = {}
+    for player_id in id_list:
+        result = fetch_player_info_basic(player_id, week)
+        if isinstance(result, dict) and "error" in result:
+            contexts[player_id] = None
+        else:
+            contexts[player_id] = result
+    return {"matchup_contexts": contexts}
+
+@router.get("/player_info/{player_id}/{week}")
+def fetch_player_info_basic(player_id: str, week: int):
+    player = sleeper_all_players.get(player_id)
+    if player is None:
+        return {"error": f"Player {player_id} not found"}
+
+    name = f"{player.get('first_name')} {player.get('last_name')}"
+    position = player.get("position")
+
+    # 1. Player ranking
+    try:
+        ranking = fetch_weekly_player_ranking(player_id, week)
+        if isinstance(ranking, dict) and "error" in ranking:
+            ranking = None
+    except Exception:
+        ranking = None
+
+    # 2. Matchup context (opponent + opponent def ranking)
+    matchup = fetch_matchup_context(player_id, week)
+    if isinstance(matchup, dict) and "error" in matchup:
+        matchup = None
+
+    # 3. Projection
+    projection = fetch_projection(player_id, week)
+
+    # 4. Recent news
+    news = fetch_most_recent_player_news(player_id)
+
+    return {
+        "player": name,
+        "fpid": sleeper_fp_map.get(player_id),
+        "position": position,
+        "week": week,
+        "ranking": ranking,
+        "projected_points": projection.get("projected_points", 0),
+        "opponent_def_rank": matchup.get("opponent_def_rank") if matchup else None,
+        "news": news.get("news impact", "no news"),
     }
 
