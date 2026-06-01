@@ -20,3 +20,29 @@ class Matchup(BaseModel):
     week: int
     my_team: TeamScore
     opp_team: TeamScore
+
+class CompareRequest(BaseModel):
+    players: str       # list of player_ids seperated by a colon
+    league_id: str
+    week: int
+    season: int
+
+class PlayerStat(BaseModel):
+    def_rank: str           
+    game_total: float       
+    spread: str             # "CIN -3.5"
+    weather: str            # "clear" or "wind 18mph"
+
+class ComparePlayer(BaseModel):
+    player: str             # name
+    rank: int               
+    verdict: str            # "start" "ok" or "sit"
+    projection: float       
+    # stats: PlayerStat
+    stats: str              # just def_rank for now
+    reasoning: str          
+
+class CompareResponse(BaseModel):
+    players: list[ComparePlayer]
+    starting_player: str
+    summary: str            # "Start Chase. Here's why..."
