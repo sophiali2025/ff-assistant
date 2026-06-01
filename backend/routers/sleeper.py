@@ -24,9 +24,23 @@ def fetch_scoring_settings(league_id: str):
     league = get_league(league_id)
     return {"scoring_settings": league["scoring_settings"]}
 
+@router.get("/league/type/{league_id}")
+def fetch_league_type(league_id: str):
+    league = fetch_scoring_settings(league_id)
+    rec_points = league["scoring_settings"]["rec"]
+    league_type = "PPR"
+    if rec_points == 0:
+        league_type = "STD"
+    elif rec_points == 0.5:
+        league_type = "HALF"
+
+    return {"league type": league_type}
+
 @router.get("/league/{league_id}")
 def fetch_league(league_id: str):
     return get_league(league_id)
+
+
 
 # matchup info
 @router.get("/matchup/{league_id}/{week}/{roster_id}")

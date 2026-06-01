@@ -3,6 +3,7 @@ import json
 from fastapi import APIRouter
 from services.claude import ask_claude
 from routers.startsit import fetch_batch_player_info_basic
+from routers.sleeper import fetch_league_type
 
 SEASON = 2025
 
@@ -21,10 +22,12 @@ async def test_claude():
     return {"message": message}
 
 @router.post("/ai/compare")
-async def compare_players(players: str, week: int):
+async def compare_players(players: str, week: int, league_id: str):
     player_info = fetch_batch_player_info_basic(week, players)
+    league_type = fetch_league_type(league_id)["league type"]
 
     prompt = f"""Compare these fantasy football players for week {week} of the {SEASON} season.
+    League format: {league_type}
     Player Info: {player_info}
 
     Rank them from best to worst start option."""
