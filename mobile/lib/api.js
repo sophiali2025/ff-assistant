@@ -141,6 +141,7 @@ export async function fetchRoster() {
     return {
       player_id: id,
       name: `${detail.first_name} ${detail.last_name}`,
+      position: detail.position ?? "??",
       slot,
       status: detail.injury_status?.toLowerCase() ?? "active",
       points_this_week: matchup.players_points?.[id] ?? 0,
@@ -157,6 +158,7 @@ export async function fetchRoster() {
       return {
         player_id: id,
         name: `${detail.first_name} ${detail.last_name}`,
+        position: detail.position ?? "??",
         slot: "BN",
         status: detail.injury_status?.toLowerCase() ?? "active",
         points_this_week: matchup.players_points?.[id] ?? 0,
@@ -166,6 +168,12 @@ export async function fetchRoster() {
 
   // 6. Return starters first, then bench — that's the natural roster order.
   return [...starters, ...bench];
+}
+
+export async function fetchMatchupContext(playerId, week = WEEK) {
+  const response = await fetch(`${API_URL}/startsit/matchup_context/${playerId}/${week}`);
+  if (!response.ok) throw new Error(`Failed to fetch matchup context: ${response.status}`);
+  return await response.json();
 }
 
 export async function fetchPlayerNews(playerId) {
