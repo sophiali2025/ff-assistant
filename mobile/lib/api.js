@@ -9,6 +9,7 @@ const USER_ID = "1130559048241356800"
 const LEAGUE_ID = "1267619828559007744";
 const WEEK = 17
 const ROSTER_ID = 5
+const SEASON = 2025
 
 // Toggle this to enable/disable projection API calls.
 // Set to false to avoid burning API calls during development.
@@ -168,6 +169,28 @@ export async function fetchRoster() {
 
   // 6. Return starters first, then bench — that's the natural roster order.
   return [...starters, ...bench];
+}
+
+// POST /ai/compare/claude — sends selected player IDs to the AI
+// comparison endpoint. Unlike GET requests where data goes in the URL,
+// POST requests send data in the request body as JSON.
+export async function comparePlayersClaude(playerIds) {
+  // Join the array of IDs into a colon-separated string.
+  // e.g. ["4042", "4046", "8183"] → "4042:4046:8183"
+  const players = playerIds.join(":");
+
+  const response = await fetch(`${API_URL}/ai/compare/claude`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      players,
+      league_id: LEAGUE_ID,
+      week: WEEK,
+      season: SEASON,
+    }),
+  });
+  if (!response.ok) throw new Error(`Compare failed: ${response.status}`);
+  return await response.json();
 }
 
 export async function fetchMatchupContext(playerId, week = WEEK) {

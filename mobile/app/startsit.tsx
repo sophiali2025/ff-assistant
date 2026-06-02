@@ -2,7 +2,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 
 import { useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { fetchRoster, fetchMatchupContext } from '@/lib/api';
+import { fetchRoster, fetchMatchupContext, comparePlayersClaude } from '@/lib/api';
 
 // Each player in the comparison gets a unique color.
 const PLAYER_COLORS = ['#9F98EE', '#7BB0FF', '#8AEDCE', '#ECB781'];
@@ -34,6 +34,7 @@ export default function StartSitScreen() {
   const [searchQuery, setSearchQuery] = useState('');                         // searchQuery: what the user is typing in the search bar
   const [selectedPlayers, setSelectedPlayers] = useState<RosterPlayer[]>([]); // selectedPlayers: players the user has added to compare
   const [matchups, setMatchups] = useState<Record<string, { team: string; opponent: string; is_home: boolean }>>({}); // matchups: keyed by player_id
+  const [loading, setLoading] = useState(false);  // true while waiting for Claude's response
 
   // --- EFFECT ---
   // Runs once when the screen loads. Fetches your full roster from
@@ -82,6 +83,28 @@ export default function StartSitScreen() {
       delete next[playerId];
       return next;
     });
+  };
+
+  // Called when the user taps "View Advice".
+  // logs the response for now.
+  const handleViewAdvice = () => {
+    if (selectedPlayers.length < 2) return;  // need at least 2 players to compare
+    setLoading(true);
+
+    // .map() extracts just the player_id from each selected player object.
+    // comparePlayersClaude will join them with ":" for the backend.
+    const playerIds = selectedPlayers.map(p => p.player_id);
+
+    comparePlayersClaude(playerIds)
+      .then(result => {
+        console.log('Claude comparison result:', JSON.stringify(result, null, 2));
+      })
+      .catch(err => {
+        console.error('Compare failed:', err);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   };
 
   return (
@@ -156,8 +179,15 @@ export default function StartSitScreen() {
         </View>
 
         {/* View Advice button */}
-        <TouchableOpacity style={styles.viewAdviceButton} activeOpacity={0.7}>
-          <Text style={styles.viewAdviceText}>View Advice</Text>
+        <TouchableOpacity
+          style={[styles.viewAdviceButton, selectedPlayers.length < 2 && { opacity: 0.4 }]}
+          activeOpacity={0.7}
+          onPress={handleViewAdvice}
+          disabled={selectedPlayers.length < 2 || loading}
+        >
+          <Text style={styles.viewAdviceText}>
+            {loading ? 'Asking Claude ...' : 'View Advice'}
+          </Text>
         </TouchableOpacity>
 
         {/* Stats box */}
