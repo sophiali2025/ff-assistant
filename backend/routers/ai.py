@@ -26,6 +26,12 @@ async def test_gemini():
     message = await ask_gemini("Say good morning in one sentence.")
     return {"message": message}
 
+def parse_rankings(players: list[ComparePlayer]) -> str:
+    """Turn ranked players into 'Tracy > Walker > Shakir' format.
+    Players are already sorted by rank from Claude's response."""
+    last_names = [" ".join(p.player.split()[1:]) for p in players]
+    return " > ".join(last_names)
+
 def parse_compare_response(raw: str) -> list[ComparePlayer]:
     text = raw.strip()
     if text.startswith("```"):
@@ -52,6 +58,7 @@ async def compare_players_claude(request: CompareRequest):
 
     return CompareResponse(
         players=players,
+        rankings=parse_rankings(players),
         starting_player=players[0].player,
         summary=f"Start {players[0].player}. {players[0].reasoning}"
     )
@@ -72,6 +79,7 @@ async def compare_players_gemini(request: CompareRequest):
 
     return CompareResponse(
         players=players,
+        rankings=parse_rankings(players),
         starting_player=players[0].player,
         summary=f"Start {players[0].player}. {players[0].reasoning}"
     )

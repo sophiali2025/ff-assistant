@@ -44,5 +44,6 @@ class ComparePlayer(BaseModel):
 
 class CompareResponse(BaseModel):
     players: list[ComparePlayer]
+    rankings: str
     starting_player: str
     summary: str            # "Start Chase. Here's why..."

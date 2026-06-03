@@ -35,7 +35,7 @@ export default function StartSitScreen() {
   const [selectedPlayers, setSelectedPlayers] = useState<RosterPlayer[]>([]); // selectedPlayers: players the user has added to compare
   const [matchups, setMatchups] = useState<Record<string, { team: string; opponent: string; is_home: boolean }>>({}); // matchups: keyed by player_id
   const [loading, setLoading] = useState(false);  // true while waiting for Claude's response
-  const [advice, setAdvice] = useState<{ starting_player: string; summary: string } | null>(null);
+  const [advice, setAdvice] = useState<{ rankings: string; starting_player: string; summary: string } | null>(null);
 
   // --- EFFECT ---
   // Runs once when the screen loads. Fetches your full roster from
@@ -219,7 +219,7 @@ export default function StartSitScreen() {
                 </View>
                 <View style={styles.suggestionTopText}>
                   <Text style={styles.suggestionTitle}>Start {advice.starting_player}</Text>
-                  <Text style={styles.suggestionSubtitle}>{'Sutton > Rice > Henry'}</Text>
+                  <Text style={styles.suggestionSubtitle}>{advice.rankings}</Text>
                 </View>
               </View>
               <View style={styles.suggestionDivider} />
