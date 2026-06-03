@@ -18,12 +18,10 @@ type RosterPlayer = {
   projected_points: number;
 };
 
-const STAT_ROWS = [
-  { label: 'projected', values: ['16.2', '14.6', '15.8'] },
-  { label: 'def rank', values: ['28th', '14th', '18th'] },
-  { label: 'game total', values: ['47.5', '42.0', '44.5'] },
-  { label: 'weather', values: ['clear', 'wind', 'rain'] },
-  { label: 'spread', values: ['-3.5', '+4.5', '-6.0'] },
+const STATIC_STAT_ROWS = [
+  { label: 'game total', values: ['coming soon'] },
+  { label: 'spread', values: ['coming soon'] },
+  { label: 'weather', values: ['coming soon'] },
 ];
 
 export default function StartSitScreen() {
@@ -35,7 +33,12 @@ export default function StartSitScreen() {
   const [selectedPlayers, setSelectedPlayers] = useState<RosterPlayer[]>([]); // selectedPlayers: players the user has added to compare
   const [matchups, setMatchups] = useState<Record<string, { team: string; opponent: string; is_home: boolean }>>({}); // matchups: keyed by player_id
   const [loading, setLoading] = useState(false);  // true while waiting for Claude's response
-  const [advice, setAdvice] = useState<{ rankings: string; starting_player: string; summary: string } | null>(null);
+  const [advice, setAdvice] = useState<{
+    players: { player: string; projection: number; stats: string }[];
+    rankings: string;
+    starting_player: string;
+    summary: string;
+  } | null>(null);
 
   // --- EFFECT ---
   // Runs once when the screen loads. Fetches your full roster from
@@ -191,22 +194,36 @@ export default function StartSitScreen() {
           </Text>
         </TouchableOpacity>
 
-        {/* Stats box */}
-        <View style={styles.statsBox}>
-          {STAT_ROWS.map((row, i) => (
-            <View key={row.label}>
-              <View style={styles.statRow}>
-                <Text style={styles.statLabel}>{row.label}</Text>
-                {row.values.map((val, j) => (
-                  <View key={j} style={[styles.statPill, { backgroundColor: PLAYER_COLORS[j] }]}>
-                    <Text style={styles.statPillText}>{val}</Text>
+        {/* Stats box — only appears after Claude responds */}
+        {advice && (() => {
+          // Build projected and def rank rows from Claude's response.
+          // advice.players is sorted by rank, so the pills line up
+          // with the player cards in order.
+          const statRows = [
+            { label: 'projected', values: advice.players.map(p => p.projection.toFixed(1)) },
+            { label: 'def rank', values: advice.players.map(p => p.stats) },
+            ...STATIC_STAT_ROWS,
+          ];
+          return (
+            <View style={styles.statsBox}>
+              {statRows.map((row, i) => (
+                <View key={row.label}>
+                  <View style={styles.statRow}>
+                    <Text style={styles.statLabel}>{row.label}</Text>
+                    {row.values.length === 1 && row.values[0] === 'coming soon'
+                      ? <Text style={styles.comingSoonText}>coming soon</Text>
+                      : row.values.map((val, j) => (
+                        <View key={j} style={[styles.statPill, { backgroundColor: PLAYER_COLORS[j] }]}>
+                          <Text style={styles.statPillText}>{val}</Text>
+                        </View>
+                      ))}
                   </View>
-                ))}
-              </View>
-              {i < STAT_ROWS.length - 1 && <View style={styles.statDivider} />}
+                  {i < statRows.length - 1 && <View style={styles.statDivider} />}
+                </View>
+              ))}
             </View>
-          ))}
-        </View>
+          );
+        })()}
 
         {/* Suggestion box — only appears after Claude responds */}
         {advice && (
@@ -492,6 +509,11 @@ const styles = StyleSheet.create({
     fontSize: 8,
     fontWeight: 'bold',
     color: '#375481',
+  },
+  comingSoonText: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.4)',
+    fontStyle: 'italic',
   },
   statDivider: {
     height: 1,
