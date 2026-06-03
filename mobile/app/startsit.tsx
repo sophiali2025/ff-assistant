@@ -35,6 +35,7 @@ export default function StartSitScreen() {
   const [selectedPlayers, setSelectedPlayers] = useState<RosterPlayer[]>([]); // selectedPlayers: players the user has added to compare
   const [matchups, setMatchups] = useState<Record<string, { team: string; opponent: string; is_home: boolean }>>({}); // matchups: keyed by player_id
   const [loading, setLoading] = useState(false);  // true while waiting for Claude's response
+  const [advice, setAdvice] = useState<{ starting_player: string; summary: string } | null>(null);
 
   // --- EFFECT ---
   // Runs once when the screen loads. Fetches your full roster from
@@ -97,7 +98,7 @@ export default function StartSitScreen() {
 
     comparePlayersClaude(playerIds)
       .then(result => {
-        console.log('Claude comparison result:', JSON.stringify(result, null, 2));
+        setAdvice(result);
       })
       .catch(err => {
         console.error('Compare failed:', err);
@@ -207,34 +208,33 @@ export default function StartSitScreen() {
           ))}
         </View>
 
-        {/* Suggestion box */}
-        <View style={styles.suggestionBox}>
-          {/* Top half */}
-          <View style={styles.suggestionTop}>
-            <View style={styles.trophyIcon}>
-              <Ionicons name="trophy" size={24} color="#A1C4F9" />
+        {/* Suggestion box — only appears after Claude responds */}
+        {advice && (
+          <>
+            <View style={styles.suggestionBox}>
+              {/* Top half */}
+              <View style={styles.suggestionTop}>
+                <View style={styles.trophyIcon}>
+                  <Ionicons name="trophy" size={24} color="#A1C4F9" />
+                </View>
+                <View style={styles.suggestionTopText}>
+                  <Text style={styles.suggestionTitle}>Start {advice.starting_player}</Text>
+                  <Text style={styles.suggestionSubtitle}>{'Sutton > Rice > Henry'}</Text>
+                </View>
+              </View>
+              <View style={styles.suggestionDivider} />
+              {/* Bottom half */}
+              <Text style={styles.suggestionBody}>{advice.summary}</Text>
             </View>
-            <View style={styles.suggestionTopText}>
-              <Text style={styles.suggestionTitle}>Start Courtland Sutton</Text>
-              <Text style={styles.suggestionSubtitle}>{'Sutton > Rice > Henry'}</Text>
-            </View>
-          </View>
-          <View style={styles.suggestionDivider} />
-          {/* Bottom half */}
-          <Text style={styles.suggestionBody}>
-            Start Courtland Sutton. Worst def matchup + highest total + clear weather.
-            Rice edges Henry at #2 - better matchup and no wind concerns despite lower
-            projection. Henry has the positive game script but the weather hurts his
-            passing game upside.
-          </Text>
-        </View>
 
-        {/* Follow-up button */}
-        <TouchableOpacity style={styles.followUpButton} activeOpacity={0.7}>
-          <Ionicons name="sparkles-outline" size={20} color="#A1C4F9" />
-          <Text style={styles.followUpText}>ask a follow-up ...</Text>
-          <Ionicons name="arrow-forward" size={20} color="#A1C4F9" />
-        </TouchableOpacity>
+            {/* Follow-up button */}
+            <TouchableOpacity style={styles.followUpButton} activeOpacity={0.7}>
+              <Ionicons name="sparkles-outline" size={20} color="#A1C4F9" />
+              <Text style={styles.followUpText}>ask a follow-up ...</Text>
+              <Ionicons name="arrow-forward" size={20} color="#A1C4F9" />
+            </TouchableOpacity>
+          </>
+        )}
       </ScrollView>
     </View>
   );
