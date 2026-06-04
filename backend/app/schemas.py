@@ -39,7 +39,8 @@ class ComparePlayer(BaseModel):
     verdict: str            # "start" "ok" or "sit"
     projection: float       
     # stats: PlayerStat
-    stats: str              # just def_rank for now
+    ranking: str
+    def_rank: str              # just def_rank for now
     reasoning: str          
 
 class CompareResponse(BaseModel):

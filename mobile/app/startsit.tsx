@@ -1,6 +1,6 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { fetchRoster, fetchMatchupContext, comparePlayersClaude } from '@/lib/api';
 
@@ -33,8 +33,10 @@ export default function StartSitScreen() {
   const [selectedPlayers, setSelectedPlayers] = useState<RosterPlayer[]>([]); // selectedPlayers: players the user has added to compare
   const [matchups, setMatchups] = useState<Record<string, { team: string; opponent: string; is_home: boolean }>>({}); // matchups: keyed by player_id
   const [loading, setLoading] = useState(false);  // true while waiting for Claude's response
+  const [activeDot, setActiveDot] = useState(0); // which suggestion card is visible
+  const suggestionScrollRef = useRef<ScrollView>(null);
   const [advice, setAdvice] = useState<{
-    players: { player: string; projection: number; stats: string }[];
+    players: { player: string; projection: number; ranking: string; def_rank: string; verdict: string; reasoning: string }[];
     rankings: string;
     starting_player: string;
     summary: string;
@@ -102,6 +104,8 @@ export default function StartSitScreen() {
     comparePlayersClaude(playerIds)
       .then(result => {
         setAdvice(result);
+        setActiveDot(0);
+        suggestionScrollRef.current?.scrollTo({ x: 0, animated: false });
       })
       .catch(err => {
         console.error('Compare failed:', err);
@@ -199,7 +203,8 @@ export default function StartSitScreen() {
           // Build projected and def rank rows from Claude's response.
           const statRows = [
             { label: 'projected', values: advice.players.map(p => p.projection.toFixed(1)) },
-            { label: 'def rank', values: advice.players.map(p => p.stats) },
+            { label: 'ranking', values: advice.players.map(p => p.ranking) },
+            { label: 'def rank', values: advice.players.map(p => p.def_rank) },
             ...STATIC_STAT_ROWS,
           ];
 
@@ -208,14 +213,15 @@ export default function StartSitScreen() {
           const parseNum = (val: string) => parseFloat(val.replace(/[^0-9.]/g, ''));
 
           // Calculate a fixed width for each pill, scaled proportionally.
-          const MIN_PILL = 36;
-          const MAX_PILL = 70;
-          const pillWidth = (val: string, allValues: string[]) => {
+          const MIN_PILL = 25;
+          const MAX_PILL = 75;
+          const pillWidth = (val: string, allValues: string[], invert = false) => {
             const nums = allValues.map(parseNum);
             const max = Math.max(...nums);
             const min = Math.min(...nums);
             if (max === min) return (MIN_PILL + MAX_PILL) / 2;
-            const ratio = (parseNum(val) - min) / (max - min);
+            let ratio = (parseNum(val) - min) / (max - min);
+            if (invert) ratio = 1 - ratio;
             return MIN_PILL + ratio * (MAX_PILL - MIN_PILL);
           };
 
@@ -230,7 +236,7 @@ export default function StartSitScreen() {
                       : row.values.map((val, j) => (
                         <View key={j} style={[styles.statPill, {
                           backgroundColor: PLAYER_COLORS[j],
-                          width: pillWidth(val, row.values),
+                          width: pillWidth(val, row.values, row.label === 'ranking'),
                         }]}>
                           <Text style={styles.statPillText}>{val}</Text>
                         </View>
@@ -243,33 +249,76 @@ export default function StartSitScreen() {
           );
         })()}
 
-        {/* Suggestion box — only appears after Claude responds */}
-        {advice && (
-          <>
-            <View style={styles.suggestionBox}>
-              {/* Top half */}
-              <View style={styles.suggestionTop}>
-                <View style={styles.trophyIcon}>
-                  <Ionicons name="trophy" size={24} color="#A1C4F9" />
-                </View>
-                <View style={styles.suggestionTopText}>
-                  <Text style={styles.suggestionTitle}>Start {advice.starting_player}</Text>
-                  <Text style={styles.suggestionSubtitle}>{advice.rankings}</Text>
+        {/* Suggestion box — swipe inside the box to see each player */}
+        {advice && (() => {
+          // Content width is the box's inner width (screen - margins - border/padding)
+          const CONTENT_WIDTH = Dimensions.get('window').width - 32 - 2;
+          return (
+            <>
+              <View style={styles.suggestionBox}>
+                <ScrollView
+                  ref={suggestionScrollRef}
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  snapToInterval={CONTENT_WIDTH}
+                  decelerationRate="fast"
+                  onScroll={(e) => {
+                    const page = Math.round(e.nativeEvent.contentOffset.x / CONTENT_WIDTH);
+                    setActiveDot(page);
+                  }}
+                  scrollEventThrottle={16}
+                >
+                  {advice.players.map((player, i) => (
+                    <View key={i} style={{ width: CONTENT_WIDTH }}>
+                      {/* Top half */}
+                      <View style={styles.suggestionTop}>
+                        <View style={styles.trophyIcon}>
+                          <Ionicons
+                            name={player.verdict === 'start' ? 'trophy' : player.verdict === 'sit' ? 'thumbs-down' : 'remove-circle-outline'}
+                            size={24}
+                            color="#A1C4F9"
+                          />
+                        </View>
+                        <View style={styles.suggestionTopText}>
+                          <Text style={styles.suggestionTitle}>
+                            {player.verdict === 'start' ? 'Start' : player.verdict === 'sit' ? 'Sit' : 'Maybe'} {player.player}
+                          </Text>
+                          <Text style={styles.suggestionSubtitle}>
+                            {advice.rankings.split(' > ').map((name, idx) => (
+                              <Text key={idx}>
+                                {idx > 0 && ' > '}
+                                <Text style={idx === activeDot ? { fontWeight: 'bold', color: '#FFFFFF' } : undefined}>
+                                  {name}
+                                </Text>
+                              </Text>
+                            ))}
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={styles.suggestionDivider} />
+                      {/* Bottom half */}
+                      <Text style={styles.suggestionBody}>{player.reasoning}</Text>
+                    </View>
+                  ))}
+                </ScrollView>
+                {/* Page dots */}
+                <View style={styles.dotsRow}>
+                  {advice.players.map((_, i) => (
+                    <View key={i} style={[styles.dot, i === activeDot && styles.dotActive]} />
+                  ))}
                 </View>
               </View>
-              <View style={styles.suggestionDivider} />
-              {/* Bottom half */}
-              <Text style={styles.suggestionBody}>{advice.summary}</Text>
-            </View>
 
-            {/* Follow-up button */}
-            <TouchableOpacity style={styles.followUpButton} activeOpacity={0.7}>
-              <Ionicons name="sparkles-outline" size={20} color="#A1C4F9" />
-              <Text style={styles.followUpText}>ask a follow-up ...</Text>
-              <Ionicons name="arrow-forward" size={20} color="#A1C4F9" />
-            </TouchableOpacity>
-          </>
-        )}
+              {/* Follow-up button - bonus feature*/}
+              {/* <TouchableOpacity style={styles.followUpButton} activeOpacity={0.7}>
+                <Ionicons name="sparkles-outline" size={20} color="#A1C4F9" />
+                <Text style={styles.followUpText}>ask a follow-up ...</Text>
+                <Ionicons name="arrow-forward" size={20} color="#A1C4F9" />
+              </TouchableOpacity> */}
+            </>
+          );
+        })()}
       </ScrollView>
     </View>
   );
@@ -303,7 +352,7 @@ function PlayerCard({ player, matchup, label, color, onRemove }: {
         <Text style={[styles.statusText, player.status !== 'active' && { color: '#E8AA3C' }]}>{player.status}</Text>
       </View>
       <Text style={styles.projectionRow}>
-        <Text style={[styles.projectionValue, { color }]}>{player.projected_points}</Text>
+        <Text style={[styles.projectionValue, { color }]}>{player.projected_points.toFixed(1)}</Text>
         <Text style={styles.projLabel}> proj</Text>
       </Text>
     </View>
@@ -583,6 +632,21 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     padding: 12,
     lineHeight: 18,
+  },
+  dotsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(161, 196, 249, 0.3)',
+  },
+  dotActive: {
+    backgroundColor: '#A1C4F9',
   },
 
   // Follow-up button

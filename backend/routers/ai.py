@@ -10,7 +10,7 @@ from app.schemas import CompareRequest, CompareResponse, ComparePlayer
 COMPARE_SYSTEM_PROMPT = """You are a fantasy football analyst.
 Respond with ONLY a valid JSON array, no other text.
 Use this exact structure for each player:
-[{"player": "name", "rank": 1, "verdict": "start", "projection": 19.3, "stats": "28th", "reasoning": "2-3 sentences"}]
+[{"player": "name", "rank": 1, "verdict": "start", "projection": 19.3, "ranking": "RB12", "def_rank": "28th", "reasoning": "2-3 sentences"}]
 verdict must be exactly one of: start, ok, sit.
 Rank players from 1 (best) to N (worst)."""
 
