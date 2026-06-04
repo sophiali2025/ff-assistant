@@ -197,13 +197,28 @@ export default function StartSitScreen() {
         {/* Stats box — only appears after Claude responds */}
         {advice && (() => {
           // Build projected and def rank rows from Claude's response.
-          // advice.players is sorted by rank, so the pills line up
-          // with the player cards in order.
           const statRows = [
             { label: 'projected', values: advice.players.map(p => p.projection.toFixed(1)) },
             { label: 'def rank', values: advice.players.map(p => p.stats) },
             ...STATIC_STAT_ROWS,
           ];
+
+          // Extract the numeric value from a stat string.
+          // "22nd" → 22, "1st" → 1, "12.8" → 12.8
+          const parseNum = (val: string) => parseFloat(val.replace(/[^0-9.]/g, ''));
+
+          // Calculate a fixed width for each pill, scaled proportionally.
+          const MIN_PILL = 36;
+          const MAX_PILL = 70;
+          const pillWidth = (val: string, allValues: string[]) => {
+            const nums = allValues.map(parseNum);
+            const max = Math.max(...nums);
+            const min = Math.min(...nums);
+            if (max === min) return (MIN_PILL + MAX_PILL) / 2;
+            const ratio = (parseNum(val) - min) / (max - min);
+            return MIN_PILL + ratio * (MAX_PILL - MIN_PILL);
+          };
+
           return (
             <View style={styles.statsBox}>
               {statRows.map((row, i) => (
@@ -213,7 +228,10 @@ export default function StartSitScreen() {
                     {row.values.length === 1 && row.values[0] === 'coming soon'
                       ? <Text style={styles.comingSoonText}>coming soon</Text>
                       : row.values.map((val, j) => (
-                        <View key={j} style={[styles.statPill, { backgroundColor: PLAYER_COLORS[j] }]}>
+                        <View key={j} style={[styles.statPill, {
+                          backgroundColor: PLAYER_COLORS[j],
+                          width: pillWidth(val, row.values),
+                        }]}>
                           <Text style={styles.statPillText}>{val}</Text>
                         </View>
                       ))}
@@ -491,6 +509,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 6,
+    gap: 6,
   },
   statLabel: {
     fontSize: 13,
@@ -499,10 +518,7 @@ const styles = StyleSheet.create({
   },
   statPill: {
     borderRadius: 5,
-    paddingHorizontal: 8,
     paddingVertical: 2,
-    marginRight: 6,
-    minWidth: 36,
     alignItems: 'center',
   },
   statPillText: {
