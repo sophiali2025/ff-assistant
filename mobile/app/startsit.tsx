@@ -3,6 +3,8 @@ import { useRouter } from 'expo-router';
 import { useState, useEffect, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { fetchRoster, fetchMatchupContext, comparePlayersClaude } from '@/lib/api';
+import PlayerCard from '@/components/PlayerCard';
+import StatsBox from '@/components/StatsBox';
 
 // Each player in the comparison gets a unique color.
 const PLAYER_COLORS = ['#9F98EE', '#7BB0FF', '#8AEDCE', '#ECB781'];
@@ -17,12 +19,6 @@ type RosterPlayer = {
   points_this_week: number;
   projected_points: number;
 };
-
-const STATIC_STAT_ROWS = [
-  { label: 'game total', values: ['coming soon'] },
-  { label: 'spread', values: ['coming soon'] },
-  { label: 'weather', values: ['coming soon'] },
-];
 
 export default function StartSitScreen() {
   const router = useRouter();
@@ -199,55 +195,7 @@ export default function StartSitScreen() {
         </TouchableOpacity>
 
         {/* Stats box — only appears after Claude responds */}
-        {advice && (() => {
-          // Build projected and def rank rows from Claude's response.
-          const statRows = [
-            { label: 'projected', values: advice.players.map(p => p.projection.toFixed(1)) },
-            { label: 'ranking', values: advice.players.map(p => p.ranking) },
-            { label: 'def rank', values: advice.players.map(p => p.def_rank) },
-            ...STATIC_STAT_ROWS,
-          ];
-
-          // Extract the numeric value from a stat string.
-          // "22nd" → 22, "1st" → 1, "12.8" → 12.8
-          const parseNum = (val: string) => parseFloat(val.replace(/[^0-9.]/g, ''));
-
-          // Calculate a fixed width for each pill, scaled proportionally.
-          const MIN_PILL = 25;
-          const MAX_PILL = 75;
-          const pillWidth = (val: string, allValues: string[], invert = false) => {
-            const nums = allValues.map(parseNum);
-            const max = Math.max(...nums);
-            const min = Math.min(...nums);
-            if (max === min) return (MIN_PILL + MAX_PILL) / 2;
-            let ratio = (parseNum(val) - min) / (max - min);
-            if (invert) ratio = 1 - ratio;
-            return MIN_PILL + ratio * (MAX_PILL - MIN_PILL);
-          };
-
-          return (
-            <View style={styles.statsBox}>
-              {statRows.map((row, i) => (
-                <View key={row.label}>
-                  <View style={styles.statRow}>
-                    <Text style={styles.statLabel}>{row.label}</Text>
-                    {row.values.length === 1 && row.values[0] === 'coming soon'
-                      ? <Text style={styles.comingSoonText}>coming soon</Text>
-                      : row.values.map((val, j) => (
-                        <View key={j} style={[styles.statPill, {
-                          backgroundColor: PLAYER_COLORS[j],
-                          width: pillWidth(val, row.values, row.label === 'ranking'),
-                        }]}>
-                          <Text style={styles.statPillText}>{val}</Text>
-                        </View>
-                      ))}
-                  </View>
-                  {i < statRows.length - 1 && <View style={styles.statDivider} />}
-                </View>
-              ))}
-            </View>
-          );
-        })()}
+        {advice && <StatsBox players={advice.players} />}
 
         {/* Suggestion box — swipe inside the box to see each player */}
         {advice && (() => {
@@ -323,42 +271,6 @@ export default function StartSitScreen() {
     </View>
   );
 }
-
-function PlayerCard({ player, matchup, label, color, onRemove }: {
-  player: RosterPlayer;
-  matchup?: { team: string; opponent: string; is_home: boolean };
-  label: string;
-  color: string;
-  onRemove: () => void;
-}) {
-  // Build matchup string like "WR | DEN vs DAL"
-  const matchupText = matchup
-    ? `${player.position} | ${matchup.team} ${matchup.is_home ? 'vs' : '@'} ${matchup.opponent}`
-    : player.position;
-
-  return (
-    <View style={styles.playerCard}>
-      {/* Remove button in top-right corner */}
-      <TouchableOpacity style={styles.removeButton} onPress={onRemove}>
-        <View style={styles.removeButtonCircle}>
-          <Ionicons name="close" size={9} color="#A1C4F9" />
-        </View>
-      </TouchableOpacity>
-      <Text style={styles.playerLabel}>{label}</Text>
-      <Text style={[styles.playerName, { color }]}>{player.name}</Text>
-      <Text style={styles.playerMatchup}>{matchupText}</Text>
-      <View style={styles.statusRow}>
-        <View style={[styles.statusDot, player.status !== 'active' && { backgroundColor: '#E8AA3C' }]} />
-        <Text style={[styles.statusText, player.status !== 'active' && { color: '#E8AA3C' }]}>{player.status}</Text>
-      </View>
-      <Text style={styles.projectionRow}>
-        <Text style={[styles.projectionValue, { color }]}>{player.projected_points.toFixed(1)}</Text>
-        <Text style={styles.projLabel}> proj</Text>
-      </Text>
-    </View>
-  );
-}
-
 
 const styles = StyleSheet.create({
   container: {
@@ -447,74 +359,6 @@ const styles = StyleSheet.create({
     marginTop: 14,
     gap: 14,
   },
-  playerCard: {
-    width: '47%',
-    backgroundColor: '#375481',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#A1C4F9',
-    paddingHorizontal: 12,
-    paddingTop: 6,
-    paddingBottom: 12,
-    height: 100,
-  },
-  playerLabel: {
-    fontSize: 10,
-    color: '#C1C1C1',
-  },
-  playerName: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginTop: 2,
-  },
-  playerMatchup: {
-    fontSize: 10,
-    color: '#C1C1C1',
-    marginTop: 2,
-  },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 3,
-  },
-  statusDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: '#39C196',
-    marginRight: 5,
-  },
-  statusText: {
-    fontSize: 10,
-    color: '#39C196',
-  },
-  projectionRow: {
-    marginTop: 2,
-  },
-  projectionValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  projLabel: {
-    fontSize: 10,
-    color: '#C1C1C1',
-  },
-  removeButton: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    zIndex: 1,
-  },
-  removeButtonCircle: {
-    width: 15,
-    height: 15,
-    borderRadius: 11,
-    borderWidth: 1,
-    borderColor: '#A1C4F9',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
   // Empty player card
   emptyCard: {
     width: '47%',
@@ -541,48 +385,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: 'bold',
     color: '#FFFFFF',
-  },
-
-  // Stats box
-  statsBox: {
-    backgroundColor: '#362C58',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#A1C4F9',
-    marginHorizontal: 16,
-    marginTop: 14,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-  },
-  statRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 6,
-    gap: 6,
-  },
-  statLabel: {
-    fontSize: 13,
-    color: '#FFFFFF',
-    width: 80,
-  },
-  statPill: {
-    borderRadius: 5,
-    paddingVertical: 2,
-    alignItems: 'center',
-  },
-  statPillText: {
-    fontSize: 8,
-    fontWeight: 'bold',
-    color: '#375481',
-  },
-  comingSoonText: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.4)',
-    fontStyle: 'italic',
-  },
-  statDivider: {
-    height: 1,
-    backgroundColor: 'rgba(161, 196, 249, 0.3)',
   },
 
   // Suggestion box
