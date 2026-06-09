@@ -26,3 +26,11 @@ with open("data/sleeper_fp_mappings.txt", "r") as f:
             continue
         sleeper_id, fp_id = line.split(":")
         sleeper_fp_map[sleeper_id] = fp_id
+
+# Load FantasyCalc trade values, keyed by Sleeper ID for instant lookup.
+fantasycalc_players = {}
+with open("data/fantasycalc_player.txt", "r") as f:
+    for entry in json.load(f):
+        sleeper_id = entry["player"].get("sleeperId")
+        if sleeper_id:
+            fantasycalc_players[sleeper_id] = entry

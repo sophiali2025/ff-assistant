@@ -48,3 +48,22 @@ class CompareResponse(BaseModel):
     rankings: str
     starting_player: str
     summary: str            # "Start Chase. Here's why..."
+
+class TradeRequest(BaseModel):
+    give: list[str]     # players you're giving
+    get: list[str]      # players you're getting
+    league_id: str
+    season: int
+    current_week: int
+
+class TradePlayer(BaseModel):
+    player: str
+    side: str           # "give" or "get"
+    ros_rankings: str
+    fantasy_calc_stats: str
+    news: str
+
+class TradeResponse(BaseModel):
+    verdict: str        # "accept" "decline" "counter"
+    summary: str
+    players: list[TradePlayer]
