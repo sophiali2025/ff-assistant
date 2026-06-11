@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from app.data import sleeper_fp_map, sleeper_all_players, fantasycalc_players
+from app.schemas import TradePlayer
 from services.fantasypros import get_player_rankings
 
 
@@ -32,18 +33,46 @@ def fetch_player_filtered_stats(player_id: str):
         return {"error": f"No FantasyCalc data for {player_id}"}
     return {
         "name": entry["player"]["name"],
-        "position": entry["player"]["position"],
-        "team": entry["player"]["maybeTeam"],
-        "age": entry["player"]["maybeAge"],
-        "years_of_experience": entry["player"]["maybeYoe"],
-        "value": entry["value"],
-        "overallRank": entry["overallRank"],
-        "positionRank": entry["positionRank"],
-        "trend30Day": entry["trend30Day"],
-        "redraftDynastyValueDifference": entry["redraftDynastyValueDifference"],
-        "redraftValue": entry["redraftValue"],
-        "maybeMovingStandardDeviation": entry["maybeMovingStandardDeviation"],
-        "tier": entry["maybeTier"],
-        "adp": entry["maybeAdp"],
-        "tradeFrequency": entry["maybeTradeFrequency"],
+        "info": {
+            "position": entry["player"]["position"],
+            "team": entry["player"]["maybeTeam"],
+            "age": entry["player"]["maybeAge"],
+            "years_of_experience": entry["player"]["maybeYoe"],
+        },
+        "fantasyCalc": {
+            "value": entry["value"],
+            "overallRank": entry["overallRank"],
+            "positionRank": entry["positionRank"],
+            "trend30Day": entry["trend30Day"],
+            "redraftDynastyValueDifference": entry["redraftDynastyValueDifference"],
+            "redraftValue": entry["redraftValue"],
+            "maybeMovingStandardDeviation": entry["maybeMovingStandardDeviation"],
+            "tier": entry["maybeTier"],
+            "adp": entry["maybeAdp"],
+            "tradeFrequency": entry["maybeTradeFrequency"],
+        },
     }
+
+# all player info
+@router.get("/players_trade_list/{week}")
+def get_trade_players(give_player_ids: str, get_player_ids: str, week: int) -> list[TradePlayer]:
+    players = []
+    for side, ids in [("give", give_player_ids.split(":")), ("get", get_player_ids.split(":"))]:
+        for player_id in ids:
+            filtered = fetch_player_filtered_stats(player_id)
+            if "error" in filtered:
+                continue
+
+            ros = fetch_ros_player_ranking(player_id, week)
+            if isinstance(ros, dict) and "error" in ros:
+                ros = None
+
+            players.append(TradePlayer(
+                name=filtered["name"],
+                side=side,
+                info=filtered["info"],
+                ros_ranking=ros,
+                fantasy_calc_stats=filtered["fantasyCalc"],
+            ))
+    return players
+

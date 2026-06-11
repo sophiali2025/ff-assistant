@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+# Home Screen
 class Player(BaseModel):
     player_id: str
     name: str
@@ -21,6 +22,7 @@ class Matchup(BaseModel):
     my_team: TeamScore
     opp_team: TeamScore
 
+# Start Sit
 class CompareRequest(BaseModel):
     players: str       # list of player_ids seperated by a colon
     league_id: str
@@ -49,19 +51,38 @@ class CompareResponse(BaseModel):
     starting_player: str
     summary: str            # "Start Chase. Here's why..."
 
+# Trade Evals
 class TradeRequest(BaseModel):
-    give: list[str]     # players you're giving
-    get: list[str]      # players you're getting
+    give: str     # players you're giving (player_ids seperated by a colon)
+    get: str      # players you're getting
     league_id: str
     season: int
     current_week: int
 
+class PlayerInfo(BaseModel):
+    position: str
+    team: str | None
+    age: float | None
+    years_of_experience: int | None
+
+class FantasyCalcStats(BaseModel):
+    value: int
+    overallRank: int
+    positionRank: int
+    trend30Day: int
+    redraftDynastyValueDifference: int
+    redraftValue: int
+    maybeMovingStandardDeviation: int | None
+    tier: int | None
+    adp: float | None
+    tradeFrequency: float | None
+
 class TradePlayer(BaseModel):
-    player: str
+    name: str
     side: str           # "give" or "get"
-    ros_rankings: str
-    fantasy_calc_stats: str
-    news: str
+    info: PlayerInfo
+    ros_ranking: dict | None
+    fantasy_calc_stats: FantasyCalcStats
 
 class TradeResponse(BaseModel):
     verdict: str        # "accept" "decline" "counter"
