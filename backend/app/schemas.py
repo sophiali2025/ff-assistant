@@ -56,7 +56,7 @@ class TradeRequest(BaseModel):
     give: str     # players you're giving (player_ids seperated by a colon)
     get: str      # players you're getting
     league_id: str
-    season: int
+    # season: int # hardcoded in fantasy pros and espn rn
     current_week: int
 
 class PlayerInfo(BaseModel):
@@ -80,6 +80,12 @@ class FantasyCalcStats(BaseModel):
 class TradePlayer(BaseModel):
     name: str
     side: str           # "give" or "get"
+    info: PlayerInfo
+    ros_ranking: dict | None
+    fantasy_calc_stats: FantasyCalcStats
+
+class RosterPlayer(BaseModel):
+    name: str
     info: PlayerInfo
     ros_ranking: dict | None
     fantasy_calc_stats: FantasyCalcStats

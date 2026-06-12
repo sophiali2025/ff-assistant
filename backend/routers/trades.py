@@ -1,13 +1,13 @@
 from fastapi import APIRouter
 from app.data import sleeper_fp_map, sleeper_all_players, fantasycalc_players
-from app.schemas import TradePlayer
+from app.schemas import TradePlayer, RosterPlayer
 from services.fantasypros import get_player_rankings
 
 
 router = APIRouter()
 
 # player ros rankings
-@router.get("/player_ros_rankings/weekly/{player_id}/{week}")
+@router.get("/player_rankings/ros/{player_id}/{current_week}")
 def fetch_ros_player_ranking(player_id: str, week: int):
     # player_id is a Sleeper ID — look up the FantasyPros ID from the mapping.
     fp_id = sleeper_fp_map.get(player_id)
@@ -15,7 +15,8 @@ def fetch_ros_player_ranking(player_id: str, week: int):
         return {"error": f"No FantasyPros mapping for {player_id}"}
 
     all_rankings = get_player_rankings(fp_id, week)
-    return all_rankings["players"][0]["rank"]["ECR"]["ROS-PPR"]
+    ecr = all_rankings["players"][0]["rank"].get("ECR", {})
+    return ecr.get("ROS-PPR") or ecr.get("DYN") or {"error": f"No rankings found for {player_id}"}
 
 # fantasy calc stats
 @router.get("/player_fantasycalc_stats/{player_id}")
@@ -74,5 +75,25 @@ def get_trade_players(give_player_ids: str, get_player_ids: str, week: int) -> l
                 ros_ranking=ros,
                 fantasy_calc_stats=filtered["fantasyCalc"],
             ))
+    return players
+
+@router.get("/players_roster_list/{week}")
+def get_roster_players(player_ids: str, week: int) -> list[RosterPlayer]:
+    players = []
+    for player_id in player_ids.split(":"):
+        filtered = fetch_player_filtered_stats(player_id)
+        if "error" in filtered:
+            continue
+
+        ros = fetch_ros_player_ranking(player_id, week)
+        if isinstance(ros, dict) and "error" in ros:
+            ros = None
+
+        players.append(RosterPlayer(
+            name=filtered["name"],
+            info=filtered["info"],
+            ros_ranking=ros,
+            fantasy_calc_stats=filtered["fantasyCalc"],
+        ))
     return players
 

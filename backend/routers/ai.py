@@ -5,7 +5,8 @@ from services.claude import ask_claude
 from services.gemini import ask_gemini
 from routers.startsit import fetch_batch_player_info_basic
 from routers.sleeper import fetch_league_type
-from app.schemas import CompareRequest, CompareResponse, ComparePlayer
+from routers.trades import get_trade_players, get_roster_players
+from app.schemas import CompareRequest, CompareResponse, ComparePlayer, TradePlayer, TradeRequest, TradeResponse
 
 COMPARE_SYSTEM_PROMPT = """You are a fantasy football analyst.
 Respond with ONLY a valid JSON array, no other text.
@@ -26,6 +27,7 @@ async def test_gemini():
     message = await ask_gemini("Say good morning in one sentence.")
     return {"message": message}
 
+# start sit
 def parse_rankings(players: list[ComparePlayer]) -> str:
     """Turn ranked players into 'Tracy > Walker > Shakir' format.
     Players are already sorted by rank from Claude's response."""
@@ -75,6 +77,31 @@ async def compare_players_gemini(request: CompareRequest):
     Rank them from best to worst start option."""
 
     result = await ask_gemini(prompt, system=COMPARE_SYSTEM_PROMPT)
+    players = parse_compare_response(result)
+
+    return CompareResponse(
+        players=players,
+        rankings=parse_rankings(players),
+        starting_player=players[0].player,
+        summary=f"Start {players[0].player}. {players[0].reasoning}"
+    )
+
+# trade eval
+@router.post("/ai/evaluate_trade/claude", response_model=TradeResponse)
+async def evalute_players_claude(request: TradeRequest):
+    player_info = get_trade_players(request.give, request.get, request.current_week)
+    league_type = fetch_league_type(request.league_id)["league type"]
+    # add roster
+
+    # change prompt
+    prompt = f"""Compare these fantasy football players for week {request.week} of the {request.season} season.
+    League format: {league_type}
+    Player Info: {player_info}
+
+    Provide a verdict: accept, counter, or decline and provde reasoning why in 2-3 sentences."""
+
+    # make still compare stuff below here
+    result = await ask_claude(prompt, 600, system=COMPARE_SYSTEM_PROMPT)
     players = parse_compare_response(result)
 
     return CompareResponse(
