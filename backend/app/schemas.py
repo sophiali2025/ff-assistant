@@ -56,7 +56,8 @@ class TradeRequest(BaseModel):
     give: str     # players you're giving (player_ids seperated by a colon)
     get: str      # players you're getting
     league_id: str
-    # season: int # hardcoded in fantasy pros and espn rn
+    user_id: str
+    season: int
     current_week: int
 
 class PlayerInfo(BaseModel):
@@ -94,3 +95,4 @@ class TradeResponse(BaseModel):
     verdict: str        # "accept" "decline" "counter"
     summary: str
     players: list[TradePlayer]
+    roster: list[RosterPlayer]

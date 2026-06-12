@@ -78,9 +78,9 @@ def get_trade_players(give_player_ids: str, get_player_ids: str, week: int) -> l
     return players
 
 @router.get("/players_roster_list/{week}")
-def get_roster_players(player_ids: str, week: int) -> list[RosterPlayer]:
+def get_roster_info(player_ids: list[str], week: int) -> list[RosterPlayer]:
     players = []
-    for player_id in player_ids.split(":"):
+    for player_id in player_ids:
         filtered = fetch_player_filtered_stats(player_id)
         if "error" in filtered:
             continue
