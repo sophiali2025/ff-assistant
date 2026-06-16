@@ -14,7 +14,7 @@ const MENU_ITEMS = [
     title: 'Trade Analyzer',
     subtitle: 'AI suggested trades or evaluate your own',
     icon: 'swap-horizontal' as const,
-    href: null,
+    href: '/trade' as const,
   },
   {
     title: 'Waiver Pickup',
