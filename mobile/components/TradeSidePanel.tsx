@@ -13,9 +13,11 @@ type TradeSidePanelProps = {
   label: string;
   accentColor: string;
   players: Player[];
+  onAddPlayer?: (player: Player) => void;
+  onRemovePlayer?: (index: number) => void;
 };
 
-export default function TradeSidePanel({ label, accentColor, players }: TradeSidePanelProps) {
+export default function TradeSidePanel({ label, accentColor, players, onAddPlayer, onRemovePlayer }: TradeSidePanelProps) {
   return (
     <View style={styles.panel}>
       <Text style={[styles.label, { color: accentColor }]}>{label}</Text>
@@ -27,9 +29,21 @@ export default function TradeSidePanel({ label, accentColor, players }: TradeSid
           details={player.details}
           value={player.value}
           accentColor={accentColor}
+          onRemove={() => onRemovePlayer?.(index)}
         />
       ))}
-      <AddTradePlayer />
+      <AddTradePlayer
+        onPlayerSelect={(searchResult) => {
+          // Convert the search result shape into the Player shape
+          // that TradePlayerCard expects, then pass it up to trade.tsx.
+          onAddPlayer?.({
+            position: searchResult.position,
+            name: searchResult.name,
+            details: `${searchResult.team}  |  age ${searchResult.age}`,
+            value: 0,  // hardcoded for now
+          });
+        }}
+      />
     </View>
   );
 }

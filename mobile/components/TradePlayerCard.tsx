@@ -8,9 +8,10 @@ type TradePlayerCardProps = {
   details: string;
   value: number;
   accentColor: string;   // red for "give", green for "get"
+  onRemove?: () => void;
 };
 
-export default function TradePlayerCard({ position, name, details, value, accentColor }: TradePlayerCardProps) {
+export default function TradePlayerCard({ position, name, details, value, accentColor, onRemove }: TradePlayerCardProps) {
   return (
     <View style={[styles.card, { borderColor: accentColor }]}>
       <PositionBadge position={position} size={30} />
@@ -22,7 +23,7 @@ export default function TradePlayerCard({ position, name, details, value, accent
 
       <Text style={[styles.value, { color: accentColor }]}>{value}</Text>
 
-      <TouchableOpacity style={styles.closeButton}>
+      <TouchableOpacity style={styles.closeButton} onPress={onRemove}>
         <View style={[styles.closeCircle, { borderColor: accentColor }]}>
           <Ionicons name="close" size={10} color={accentColor} />
         </View>

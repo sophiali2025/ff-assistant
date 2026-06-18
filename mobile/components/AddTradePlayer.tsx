@@ -13,10 +13,10 @@ type SearchResult = {
 };
 
 type AddTradePlayerProps = {
-  onPress?: () => void;
+  onPlayerSelect?: (player: SearchResult) => void;
 };
 
-export default function AddTradePlayer({ onPress }: AddTradePlayerProps) {
+export default function AddTradePlayer({ onPlayerSelect }: AddTradePlayerProps) {
   const [isSearching, setIsSearching] = useState(false);
   const [query, setQuery] = useState('');
   // The list of players returned by the backend search.
@@ -64,23 +64,35 @@ export default function AddTradePlayer({ onPress }: AddTradePlayerProps) {
           onChangeText={setQuery}
           autoFocus
           onBlur={() => {
-            setIsSearching(false);
-            setQuery('');
-            setResults([]);
+            // Delay so that if the user tapped a search result,
+            // its onPress fires before we clear everything.
+            setTimeout(() => {
+              setIsSearching(false);
+              setQuery('');
+              setResults([]);
+            }, 150);
           }}
         />
       </View>
 
       {/* Dropdown — only shows when there are results */}
       {results.length > 0 && (
-        <ScrollView style={styles.dropdown}>
+        <ScrollView style={styles.dropdown} keyboardShouldPersistTaps="handled">
           {results.map((player, index) => (
             <View key={player.player_id}>
               {index > 0 && <View style={styles.divider} />}
-              <View style={styles.resultRow}>
+              <TouchableOpacity
+                style={styles.resultRow}
+                onPress={() => {
+                  onPlayerSelect?.(player);
+                  setIsSearching(false);
+                  setQuery('');
+                  setResults([]);
+                }}
+              >
                 <Text style={styles.resultName}>{player.name}</Text>
                 <Text style={styles.resultPosition}>{player.position}</Text>
-              </View>
+              </TouchableOpacity>
             </View>
           ))}
         </ScrollView>

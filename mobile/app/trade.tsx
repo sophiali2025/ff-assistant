@@ -1,28 +1,26 @@
+import { useState } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import TradeSidePanel from '@/components/TradeSidePanel';
 
-// --- React Native Basics ---
-//
-// View: The fundamental building block — like a <div> in web HTML.
-//   It's a container that supports layout with flexbox, styling, and touch handling.
-//
-// Text: Required for displaying any text. Unlike the web, you can't just put
-//   raw strings inside a View — all text must be wrapped in <Text>.
-//
-// StyleSheet.create(): Defines your styles in a structured way.
-//   It looks like CSS but uses camelCase (fontSize, not font-size)
-//   and values are numbers (pixels) or strings (colors, percentages).
+type Player = {
+  position: string;
+  name: string;
+  details: string;
+  value: number;
+};
 
 export default function TradeScreen() {
-  // useRouter() gives you a router object to navigate programmatically.
-  // router.back() pops this screen off the stack, returning to the previous screen.
   const router = useRouter();
+
+  // useState arrays instead of hardcoded — these grow when the user
+  // selects a player from the search dropdown.
+  const [givePlayers, setGivePlayers] = useState<Player[]>([]);
+  const [getPlayers, setGetPlayers] = useState<Player[]>([]);
 
   return (
     <View style={styles.container}>
-      {/* Header row: back button + title on the left, week info on the right */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="chevron-back" size={28} color="#A1C4F9" />
@@ -34,12 +32,11 @@ export default function TradeScreen() {
       <TradeSidePanel
         label="you give"
         accentColor="#EF6F66"
-        players={[
-          { position: 'WR', name: 'Chris Olave', details: 'NO  |  age 25', value: 82 },
-        ]}
+        players={givePlayers}
+        onAddPlayer={(player) => setGivePlayers([...givePlayers, player])}
+        onRemovePlayer={(index) => setGivePlayers(givePlayers.filter((_, i) => i !== index))}
       />
 
-      {/* "for" divider — line on each side of the text */}
       <View style={styles.divider}>
         <View style={styles.dividerLine} />
         <Text style={styles.dividerText}>for</Text>
@@ -49,10 +46,9 @@ export default function TradeScreen() {
       <TradeSidePanel
         label="you get"
         accentColor="#54CA9D"
-        players={[
-          { position: 'RB', name: 'Kyren Williams', details: 'LAR  |  age 25', value: 73 },
-          { position: 'RB', name: 'RJ Harvey', details: 'DEN  |  age 25', value: 42 },
-        ]}
+        players={getPlayers}
+        onAddPlayer={(player) => setGetPlayers([...getPlayers, player])}
+        onRemovePlayer={(index) => setGetPlayers(getPlayers.filter((_, i) => i !== index))}
       />
 
       <TouchableOpacity style={styles.evaluateButton} activeOpacity={0.7}>
