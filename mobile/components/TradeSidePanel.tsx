@@ -40,7 +40,7 @@ export default function TradeSidePanel({ label, accentColor, players, onAddPlaye
             position: searchResult.position,
             name: searchResult.name,
             details: `${searchResult.team}  |  age ${searchResult.age}`,
-            value: 0,  // hardcoded for now
+            value: searchResult.value,
           });
         }}
       />

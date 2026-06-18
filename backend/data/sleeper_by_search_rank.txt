@@ -365,7 +365,6 @@
 11640, Jermaine Burton, 300, jermaine, burton
 8707, Tayon Fleet-Davis, 301, tayon, fleetdavis
 11506, Jalen Cropper, 301, jalen, cropper
-58, Greg Olsen, 302, greg, olsen
 11863, Leon Johnson, 302, leon, johnson
 4421, Jacob Hollister, 303, jacob, hollister
 8118, David Bell, 303, david, bell
@@ -871,7 +870,6 @@
 8595, Kyric McGowan, 577, kyric, mcgowan
 8114, Erik Ezukanma, 577, erik, ezukanma
 1071, Mohamed Sanu, 578, mohamed, sanu
-4460, Cole Hikutini, 578, cole, hikutini
 7548, Tyler Vaughns, 579, tyler, vaughns
 6420, Jon'Vea Johnson, 580, jonvea, johnson
 12884, Quincy Skinner, 582, quincy, skinner
@@ -904,7 +902,6 @@
 7005, Scottie Phillips, 600, scottie, phillips
 11580, Dillon Johnson, 600, dillon, johnson
 8760, Dre Miller, 600, dre, miller
-5845, Dwayne Haskins, 602, dwayne, haskins
 12224, David White, 602, david, white
 6823, Jacob Eason, 603, jacob, eason
 8211, Tyrion Davis-Price, 603, tyrion, davisprice
@@ -915,7 +912,6 @@
 5111, Javon Wims, 606, javon, wims
 8559, Josh Babicz, 606, josh, babicz
 6849, Denzel Mims, 607, denzel, mims
-560, Demaryius Thomas, 607, demaryius, thomas
 11607, Hayden Hatten, 608, hayden, hatten
 7619, Mathew Sexton, 609, mathew, sexton
 7593, Trey Sermon, 609, trey, sermon
@@ -932,7 +928,6 @@
 12831, Tyler Kahmann, 615, tyler, kahmann
 11995, Zack Annexstad, 615, zack, annexstad
 5170, Phillip Lindsay, 615, phillip, lindsay
-7203, Antonio Williams, 615, antonio, williams
 6996, JaMycal Hasty, 616, jamycal, hasty
 4029, Dalvin Cook, 617, dalvin, cook
 6386, Alex Bachman, 618, alex, bachman
@@ -1101,7 +1096,6 @@
 13043, Chris Tyree, 698, chris, tyree
 1287, Kai Forbath, 698, kai, forbath
 11862, Luke Benson, 698, luke, benson
-3050, Myles White, 699, myles, white
 5032, Jordan Akins, 699, jordan, akins
 11145, Tanner Brown, 700, tanner, brown
 6171, Cody Thompson, 700, cody, thompson
@@ -1116,30 +1110,24 @@
 7131, Tyler Davis, 706, tyler, davis
 4555, Andy Phillips, 709, andy, phillips
 1601, Spencer Ware, 750, spencer, ware
-275, Josh Scobee, 761, josh, scobee
 1684, Jaron Brown, 763, jaron, brown
 1794, David Fluellen, 769, david, fluellen
 8665, Armani Rogers, 772, armani, rogers
 1854, Quincy Enunwa, 774, quincy, enunwa
-1892, Jeremy Hill, 781, jeremy, hill
-1901, Isaiah Crowell, 782, isaiah, crowell
 1987, Marqise Lee, 795, marqise, lee
 2004, Cody Latimer, 798, cody, latimer
 11886, Tulu Griffin, 799, tulu, griffin
 2023, De'Anthony Thomas, 803, deanthony, thomas
 2082, Xavier Grimble, 815, xavier, grimble
 2093, Ryan Grant, 819, ryan, grant
-2242, Chandler Catanzaro, 841, chandler, catanzaro
 2279, Paul Richardson, 847, paul, richardson
 11850, Jeff Foreman, 849, jeff, foreman
 2397, Jeff Heuerman, 883, jeff, heuerman
 2412, Justin Hardy, 888, justin, hardy
 5806, John Wolford, 888, john, wolford
 2487, Geremy Davis, 901, geremy, davis
-2529, Marcus Murphy, 906, marcus, murphy
 2602, Darius Jennings, 913, darius, jennings
 4895, Lamar Atkins, 919, lamar, atkins
-2686, Khari Lee, 925, khari, lee
 3036, Matt Lengel, 942, matt, lengel
 3170, Paxton Lynch, 949, paxton, lynch
 5294, Mikah Holder, 950, mikah, holder
@@ -1147,7 +1135,6 @@
 5273, Kamryn Pettway, 964, kamryn, pettway
 3204, C.J. Prosise, 966, cj, prosise
 3208, Kenneth Dixon, 969, kenneth, dixon
-5357, Kent Shelby, 970, kent, shelby
 5401, Armanti Foreman, 972, armanti, foreman
 5427, LaQuvionte Gonzalez, 987, laquvionte, gonzalez
 5143, Demario Richard, 997, demario, richard

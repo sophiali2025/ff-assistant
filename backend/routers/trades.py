@@ -1,7 +1,20 @@
+import math
 from fastapi import APIRouter, Query
 from app.data import sleeper_fp_map, sleeper_all_players, fantasycalc_players, searchable_players
 from app.schemas import TradePlayer, RosterPlayer
 from services.fantasypros import get_player_rankings
+
+# Pre-compute the log of the max FantasyCalc value so we can normalize
+# any player's value to roughly 1–100 using a logarithmic scale.
+_max_fc_value = max(entry["value"] for entry in fantasycalc_players.values())
+_log_max = math.log(_max_fc_value)
+
+
+def normalize_value(raw: int) -> int:
+    """Scale a FantasyCalc value to 1–100 using log normalization."""
+    if raw <= 0:
+        return 0
+    return round(math.log(raw) / _log_max * 100)
 
 
 router = APIRouter()
@@ -15,12 +28,17 @@ def search_players(q: str = Query(min_length=2)):
     for player in searchable_players:
         if not player["search_first"].startswith(query) and not player["search_last"].startswith(query):
             continue
+        # Look up the player's FantasyCalc trade value, normalized to 1–100
+        fc_entry = fantasycalc_players.get(player["player_id"])
+        value = normalize_value(fc_entry["value"]) if fc_entry else 0
+
         results.append({
             "player_id": player["player_id"],
             "name": player["name"],
             "position": player["position"],
             "team": player["team"],
             "age": player["age"],
+            "value": value,
         })
         if len(results) >= 20:
             break

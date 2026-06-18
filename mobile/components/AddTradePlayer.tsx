@@ -10,6 +10,7 @@ type SearchResult = {
   position: string;
   team: string;
   age: number;
+  value: number;
 };
 
 type AddTradePlayerProps = {
