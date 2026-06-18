@@ -204,3 +204,12 @@ export async function fetchPlayerNews(playerId) {
   const data = await response.json();
   return data["news impact"] ?? data["recent news"] ?? "no news";
 }
+
+// Search for players by name. The backend matches names that START
+// with the query (e.g. "ja" matches "Ja'Marr Chase" and "Josh Jacobs").
+// Returns up to 20 results sorted by search rank (most relevant first).
+export async function searchPlayers(query) {
+  const response = await fetch(`${API_URL}/trades/players/search?q=${query}`);
+  if (!response.ok) throw new Error(`Search failed: ${response.status}`);
+  return await response.json();
+}
