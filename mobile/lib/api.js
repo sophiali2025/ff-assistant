@@ -213,3 +213,22 @@ export async function searchPlayers(query) {
   if (!response.ok) throw new Error(`Search failed: ${response.status}`);
   return await response.json();
 }
+
+// Send trade player IDs to Claude for evaluation. Returns a verdict
+// (accept/decline/counter) and a summary explanation.
+export async function evaluateTrade(givePlayerIds, getPlayerIds) {
+  const response = await fetch(`${API_URL}/ai/evaluate_trade/claude`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      give: givePlayerIds.join(":"),
+      get: getPlayerIds.join(":"),
+      league_id: LEAGUE_ID,
+      user_id: USER_ID,
+      season: SEASON,
+      current_week: WEEK,
+    }),
+  });
+  if (!response.ok) throw new Error(`Trade eval failed: ${response.status}`);
+  return await response.json();
+}

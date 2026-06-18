@@ -3,6 +3,7 @@ import TradePlayerCard from '@/components/TradePlayerCard';
 import AddTradePlayer from '@/components/AddTradePlayer';
 
 type Player = {
+  player_id: string;
   position: string;
   name: string;
   details: string;
@@ -39,6 +40,7 @@ export default function TradeSidePanel({ label, accentColor, players, onAddPlaye
           // Convert the search result shape into the Player shape
           // that TradePlayerCard expects, then pass it up to trade.tsx.
           onAddPlayer?.({
+            player_id: searchResult.player_id,
             position: searchResult.position,
             name: searchResult.name,
             details: `${searchResult.team}  |  age ${searchResult.age}`,

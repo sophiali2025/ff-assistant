@@ -1,10 +1,14 @@
 import { useState } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import TradeSidePanel from '@/components/TradeSidePanel';
+import TradeResultCard from '@/components/TradeResultCard';
+import TradeStatsCard from '@/components/TradeStatsCard';
+import { evaluateTrade } from '@/lib/api';
 
 type Player = {
+  player_id: string;
   position: string;
   name: string;
   details: string;
@@ -12,16 +16,47 @@ type Player = {
   normalized_value: number;
 };
 
+type TradeResult = {
+  verdict: 'accept' | 'decline' | 'counter';
+  summary: string;
+};
+
 export default function TradeScreen() {
   const router = useRouter();
 
-  // useState arrays instead of hardcoded — these grow when the user
-  // selects a player from the search dropdown.
   const [givePlayers, setGivePlayers] = useState<Player[]>([]);
   const [getPlayers, setGetPlayers] = useState<Player[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<TradeResult | null>(null);
+
+  const handleEvaluate = async () => {
+    if (givePlayers.length === 0 || getPlayers.length === 0) return;
+    setLoading(true);
+    setResult(null);
+    try {
+      const data = await evaluateTrade(
+        givePlayers.map((p) => p.player_id),
+        getPlayers.map((p) => p.player_id),
+      );
+      setResult({ verdict: data.verdict, summary: data.summary });
+    } catch {
+      setResult({ verdict: 'decline', summary: 'Something went wrong. Please try again.' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Calculate the difference in both raw and normalized value between get and give sides.
+  const giveTrueTotal = givePlayers.reduce((sum, p) => sum + p.value, 0);
+  const getTrueTotal = getPlayers.reduce((sum, p) => sum + p.value, 0);
+  const trueDiff = getTrueTotal - giveTrueTotal;
+
+  const giveNormTotal = givePlayers.reduce((sum, p) => sum + p.normalized_value, 0);
+  const getNormTotal = getPlayers.reduce((sum, p) => sum + p.normalized_value, 0);
+  const normDiff = getNormTotal - giveNormTotal;
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="chevron-back" size={28} color="#A1C4F9" />
@@ -52,10 +87,33 @@ export default function TradeScreen() {
         onRemovePlayer={(index) => setGetPlayers(getPlayers.filter((_, i) => i !== index))}
       />
 
-      <TouchableOpacity style={styles.evaluateButton} activeOpacity={0.7}>
-        <Text style={styles.evaluateText}>Evaluate Trade</Text>
+      <TouchableOpacity
+        style={styles.evaluateButton}
+        activeOpacity={0.7}
+        onPress={handleEvaluate}
+      >
+        <Text style={styles.evaluateText}>
+          {loading ? 'Evaluating ...' : 'Evaluate Trade'}
+        </Text>
       </TouchableOpacity>
-    </View>
+
+      {result && (
+        <TradeStatsCard
+          giveNormalized={giveNormTotal}
+          getNormalized={getNormTotal}
+          giveTrueValue={giveTrueTotal}
+          getTrueValue={getTrueTotal}
+        />
+      )}
+
+      {result && (
+        <TradeResultCard
+          verdict={result.verdict}
+          subtitle={`${trueDiff >= 0 ? '+' : ''}${trueDiff} true value, ${normDiff >= 0 ? '+' : ''}${normDiff} normalized value`}
+          summary={result.summary}
+        />
+      )}
+    </ScrollView>
   );
 }
 
