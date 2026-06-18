@@ -190,7 +190,7 @@ export default function StartSitScreen() {
           disabled={selectedPlayers.length < 2 || loading}
         >
           <Text style={styles.viewAdviceText}>
-            {loading ? 'Asking Claude ...' : 'View Advice'}
+            {loading ? 'Comparing Players ...' : 'View Advice'}
           </Text>
         </TouchableOpacity>
 

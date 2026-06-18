@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
     marginVertical: 10,
   },
   summaryScroll: {
-    maxHeight: 100,
+    maxHeight: 90,
   },
   summary: {
     fontSize: 12,

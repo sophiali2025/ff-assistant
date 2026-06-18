@@ -88,9 +88,10 @@ export default function TradeScreen() {
       />
 
       <TouchableOpacity
-        style={styles.evaluateButton}
+        style={[styles.evaluateButton, (givePlayers.length === 0 || getPlayers.length === 0) && { opacity: 0.4 }]}
         activeOpacity={0.7}
         onPress={handleEvaluate}
+        disabled={givePlayers.length === 0 || getPlayers.length === 0}
       >
         <Text style={styles.evaluateText}>
           {loading ? 'Evaluating ...' : 'Evaluate Trade'}
@@ -119,7 +120,8 @@ export default function TradeScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,                    // Take up all available space
+    flex: 1,
+    paddingBottom: 40,          // Space at the bottom so content doesn't hug the edge
     backgroundColor: '#23173E', // Dark purple background (matches Figma)
     paddingTop: 60,             // Push content below the status bar
     paddingHorizontal: 20,      // Side padding to match the Figma layout
