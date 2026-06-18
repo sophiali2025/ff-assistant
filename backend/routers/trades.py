@@ -1,10 +1,31 @@
-from fastapi import APIRouter
-from app.data import sleeper_fp_map, sleeper_all_players, fantasycalc_players
+from fastapi import APIRouter, Query
+from app.data import sleeper_fp_map, sleeper_all_players, fantasycalc_players, searchable_players
 from app.schemas import TradePlayer, RosterPlayer
 from services.fantasypros import get_player_rankings
 
 
 router = APIRouter()
+
+
+# search players by name using the pre-filtered, search-rank-sorted list
+@router.get("/players/search")
+def search_players(q: str = Query(min_length=2)):
+    results = []
+    query = q.lower()
+    for player in searchable_players:
+        if not player["search_first"].startswith(query) and not player["search_last"].startswith(query):
+            continue
+        results.append({
+            "player_id": player["player_id"],
+            "name": player["name"],
+            "position": player["position"],
+            "team": player["team"],
+            "age": player["age"],
+        })
+        if len(results) >= 20:
+            break
+    return results
+
 
 # player ros rankings
 @router.get("/player_rankings/ros/{player_id}/{current_week}")

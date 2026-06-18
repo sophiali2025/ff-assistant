@@ -27,6 +27,28 @@ with open("data/sleeper_fp_mappings.txt", "r") as f:
         sleeper_id, fp_id = line.split(":")
         sleeper_fp_map[sleeper_id] = fp_id
 
+# Load the pre-filtered, search-rank-sorted player list for the search endpoint.
+# Each line: id, name, search_rank, search_first_name, search_last_name
+searchable_players = []
+with open("data/sleeper_by_search_rank.txt", "r") as f:
+    for line in f:
+        line = line.strip()
+        if not line:
+            continue
+        parts = [p.strip() for p in line.split(",")]
+        player_id, name, rank, search_first, search_last = parts
+        # look up position and other info from the full player database
+        player = sleeper_all_players.get(player_id, {})
+        searchable_players.append({
+            "player_id": player_id,
+            "name": name,
+            "position": player.get("position"),
+            "team": player.get("team"),
+            "age": player.get("age"),
+            "search_first": search_first,
+            "search_last": search_last,
+        })
+
 # Load FantasyCalc trade values, keyed by Sleeper ID for instant lookup.
 fantasycalc_players = {}
 with open("data/fantasycalc_player.txt", "r") as f:
