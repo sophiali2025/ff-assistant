@@ -7,6 +7,7 @@ type Player = {
   name: string;
   details: string;
   value: number;
+  normalized_value: number;
 };
 
 type TradeSidePanelProps = {
@@ -28,6 +29,7 @@ export default function TradeSidePanel({ label, accentColor, players, onAddPlaye
           name={player.name}
           details={player.details}
           value={player.value}
+          normalizedValue={player.normalized_value}
           accentColor={accentColor}
           onRemove={() => onRemovePlayer?.(index)}
         />
@@ -41,6 +43,7 @@ export default function TradeSidePanel({ label, accentColor, players, onAddPlaye
             name: searchResult.name,
             details: `${searchResult.team}  |  age ${searchResult.age}`,
             value: searchResult.value,
+            normalized_value: searchResult.normalized_value,
           });
         }}
       />

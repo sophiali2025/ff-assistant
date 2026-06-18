@@ -11,6 +11,7 @@ type SearchResult = {
   team: string;
   age: number;
   value: number;
+  normalized_value: number;
 };
 
 type AddTradePlayerProps = {

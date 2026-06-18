@@ -6,12 +6,13 @@ type TradePlayerCardProps = {
   position: string;
   name: string;
   details: string;
-  value: number;
-  accentColor: string;   // red for "give", green for "get"
+  value: number;           // raw FantasyCalc value (e.g. 8905)
+  normalizedValue: number; // log-scaled 1–100 (e.g. 98)
+  accentColor: string;     // red for "give", green for "get"
   onRemove?: () => void;
 };
 
-export default function TradePlayerCard({ position, name, details, value, accentColor, onRemove }: TradePlayerCardProps) {
+export default function TradePlayerCard({ position, name, details, value, normalizedValue, accentColor, onRemove }: TradePlayerCardProps) {
   return (
     <View style={[styles.card, { borderColor: accentColor }]}>
       <PositionBadge position={position} size={30} />
@@ -21,7 +22,7 @@ export default function TradePlayerCard({ position, name, details, value, accent
         <Text style={styles.details}>{details}</Text>
       </View>
 
-      <Text style={[styles.value, { color: accentColor }]}>{value}</Text>
+      <Text style={[styles.value, { color: accentColor }]}>{normalizedValue}</Text>
 
       <TouchableOpacity style={styles.closeButton} onPress={onRemove}>
         <View style={[styles.closeCircle, { borderColor: accentColor }]}>

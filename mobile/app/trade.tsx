@@ -9,6 +9,7 @@ type Player = {
   name: string;
   details: string;
   value: number;
+  normalized_value: number;
 };
 
 export default function TradeScreen() {

@@ -28,9 +28,9 @@ def search_players(q: str = Query(min_length=2)):
     for player in searchable_players:
         if not player["search_first"].startswith(query) and not player["search_last"].startswith(query):
             continue
-        # Look up the player's FantasyCalc trade value, normalized to 1–100
+        # Look up the player's FantasyCalc trade value
         fc_entry = fantasycalc_players.get(player["player_id"])
-        value = normalize_value(fc_entry["value"]) if fc_entry else 0
+        raw_value = fc_entry["value"] if fc_entry else 0
 
         results.append({
             "player_id": player["player_id"],
@@ -38,7 +38,8 @@ def search_players(q: str = Query(min_length=2)):
             "position": player["position"],
             "team": player["team"],
             "age": player["age"],
-            "value": value,
+            "value": raw_value,
+            "normalized_value": normalize_value(raw_value),
         })
         if len(results) >= 20:
             break
