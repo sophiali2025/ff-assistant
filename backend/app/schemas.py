@@ -60,6 +60,27 @@ class TradeRequest(BaseModel):
     season: int
     current_week: int
 
+class TradeResponse(BaseModel):
+    verdict: str        # "accept" "decline" "counter"
+    summary: str
+    players: list[TradePlayer]
+    roster: list[RosterPlayer]
+
+# Waiver Adds
+class WaiverRequest(BaseModel):
+    player: str     # id of player to analyze
+    league_id: str
+    user_id: str
+    season: int
+    current_week: int
+
+class WaiverResponse(BaseModel):
+    verdict: str        # "add" "don't add"
+    summary: str
+    player: TradePlayer
+    roster: list[RosterPlayer]
+
+# Trades and Waivers
 class PlayerInfo(BaseModel):
     position: str
     team: str | None
@@ -91,8 +112,3 @@ class RosterPlayer(BaseModel):
     ros_ranking: dict | None
     fantasy_calc_stats: FantasyCalcStats
 
-class TradeResponse(BaseModel):
-    verdict: str        # "accept" "decline" "counter"
-    summary: str
-    players: list[TradePlayer]
-    roster: list[RosterPlayer]

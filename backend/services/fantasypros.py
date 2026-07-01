@@ -51,3 +51,12 @@ def get_player_rankings(player_id: str, week: int):
     response.raise_for_status()
 
     return response.json()
+
+def get_player_points():
+    response = httpx.get(
+        f"{FANTASY_PROS_URL}/nfl/{SEASON}/player-points?position=ALL&scoring=PPR",
+        headers=FANTASY_PROS_HEADERS,
+    )
+    response.raise_for_status()
+
+    return response.json()
