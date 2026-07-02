@@ -1,7 +1,7 @@
 import math
 from fastapi import APIRouter, Query
 from app.data import sleeper_fp_map, sleeper_all_players, fantasycalc_players, searchable_players
-from app.schemas import TradePlayer, RosterPlayer
+from app.schemas import TradeWaiverPlayer, RosterPlayer
 from services.fantasypros import get_player_rankings
 
 # Pre-compute the log of the max FantasyCalc value so we can normalize
@@ -96,7 +96,7 @@ def fetch_player_filtered_stats(player_id: str):
 
 # all player info
 @router.get("/players_trade_list/{week}")
-def get_trade_players(give_player_ids: str, get_player_ids: str, week: int) -> list[TradePlayer]:
+def get_trade_players(give_player_ids: str, get_player_ids: str, week: int) -> list[TradeWaiverPlayer]:
     players = []
     for side, ids in [("give", give_player_ids.split(":")), ("get", get_player_ids.split(":"))]:
         for player_id in ids:
@@ -108,7 +108,7 @@ def get_trade_players(give_player_ids: str, get_player_ids: str, week: int) -> l
             if isinstance(ros, dict) and "error" in ros:
                 ros = None
 
-            players.append(TradePlayer(
+            players.append(TradeWaiverPlayer(
                 name=filtered["name"],
                 side=side,
                 info=filtered["info"],

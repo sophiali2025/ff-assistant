@@ -7,7 +7,8 @@ from routers.startsit import fetch_batch_player_info_basic
 from routers.sleeper import fetch_league_type
 from routers.trades import get_trade_players, get_roster_info
 from routers.sleeper import fetch_roster
-from app.schemas import CompareRequest, CompareResponse, ComparePlayer, TradePlayer, TradeRequest, TradeResponse
+from app.schemas import CompareRequest, CompareResponse, ComparePlayer, TradeWaiverPlayer, TradeRequest, TradeResponse, WaiverRequest, WaiverResponse
+from routers.waivers import fetch_waiver_player, fetch_roster_players
 
 COMPARE_SYSTEM_PROMPT = """You are a fantasy football analyst.
 Respond with ONLY a valid JSON array, no other text.
@@ -145,4 +146,71 @@ async def evaluate_trade_claude(request: TradeRequest):
         summary=parsed["summary"],
         players=trade_players,
         roster=roster_players,
+    )
+
+# waiver eval
+WAIVER_SYSTEM_PROMPT = """You are a fantasy football waiver wire analyst.
+Evaluate whether the user should add this player from waivers.
+Consider: player value, recent performance, snap share trends, roster needs, and which players could be dropped.
+
+IMPORTANT: Never mention the numeric "value" from fantasyCalc stats directly.
+Use relative language instead (e.g. "worth more than double", "significantly more valuable").
+All other stats (rankings, positions, trends, recent_adds, last_3_avg, snap_share) can be cited numerically.
+
+If recommending to add, suggest 1-3 droppable players from the roster (prioritize worst value/performance).
+If not adding, drop_player_ids should be an empty list.
+
+Respond with ONLY valid JSON in this exact structure, no other text:
+{
+  "verdict": "add",
+  "summary": "2-3 sentence explanation of your verdict",
+  "drop_player_ids": ["player_id1", "player_id2"]
+}
+verdict must be exactly one of: add, don't add.
+drop_player_ids must be a list of 0-3 player IDs from the roster."""
+
+def parse_waiver_response(raw: str) -> dict:
+    text = raw.strip()
+    if text.startswith("```"):
+        text = text.split("\n", 1)[1]
+        text = text.rsplit("```", 1)[0]
+        text = text.strip()
+    return json.loads(text)
+
+@router.post("/ai/evaluate_waiver/claude", response_model=WaiverResponse)
+async def evaluate_waiver_claude(request: WaiverRequest):
+    waiver_player = fetch_waiver_player(request.player, request.current_week)
+    league_type = fetch_league_type(request.league_id)["league type"]
+
+    roster = fetch_roster(request.league_id, request.user_id)
+    roster_player_ids = ":".join(roster["players"])
+    roster_players = fetch_roster_players(roster_player_ids, request.current_week)
+
+    prompt = f"""Evaluate adding this player from waivers for week {request.current_week} of the {request.season} season. League format: {league_type}.
+
+    WAIVER PLAYER: {waiver_player}
+
+    MY CURRENT ROSTER: {roster_players}
+
+    Should I add this player? If yes, who should I drop? Consider:
+    - Is this player valuable based on rankings, recent performance (last_3_avg), and snap share?
+    - How many teams recently added this player (recent_adds)?
+    - Does this improve my roster's weaknesses or add depth?
+    - Which players on my roster are droppable based on low value/performance?"""
+
+    result = await ask_claude(prompt, 800, system=WAIVER_SYSTEM_PROMPT)
+    parsed = parse_waiver_response(result)
+
+    # Get drop player details
+    drop_player_ids = parsed.get("drop_player_ids", [])
+    drop_players = []
+    if drop_player_ids:
+        drop_player_ids_str = ":".join(drop_player_ids)
+        drop_players = fetch_roster_players(drop_player_ids_str, request.current_week)
+
+    return WaiverResponse(
+        verdict=parsed["verdict"],
+        summary=parsed["summary"],
+        player=waiver_player,
+        drop_players=drop_players,
     )

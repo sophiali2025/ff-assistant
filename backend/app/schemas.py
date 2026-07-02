@@ -63,7 +63,7 @@ class TradeRequest(BaseModel):
 class TradeResponse(BaseModel):
     verdict: str        # "accept" "decline" "counter"
     summary: str
-    players: list[TradePlayer]
+    players: list[TradeWaiverPlayer]
     roster: list[RosterPlayer]
 
 # Waiver Adds
@@ -77,8 +77,8 @@ class WaiverRequest(BaseModel):
 class WaiverResponse(BaseModel):
     verdict: str        # "add" "don't add"
     summary: str
-    player: TradePlayer
-    roster: list[RosterPlayer]
+    player: TradeWaiverPlayer
+    drop_players: list[RosterPlayer]
 
 # Trades and Waivers
 class PlayerInfo(BaseModel):
@@ -99,16 +99,23 @@ class FantasyCalcStats(BaseModel):
     adp: float | None
     tradeFrequency: float | None
 
-class TradePlayer(BaseModel):
+class WaiverExtraStats(BaseModel):
+    recent_adds: int | None = None
+    last_3_avg: float | None = None
+    snap_share: float | None = None
+
+class TradeWaiverPlayer(BaseModel):
     name: str
-    side: str           # "give" or "get"
+    side: str | None = None           # "give" or "get", none = waiver player
     info: PlayerInfo
     ros_ranking: dict | None
-    fantasy_calc_stats: FantasyCalcStats
+    fantasy_calc_stats: FantasyCalcStats | None
+    waiver_stats: WaiverExtraStats | None = None
 
 class RosterPlayer(BaseModel):
     name: str
     info: PlayerInfo
     ros_ranking: dict | None
-    fantasy_calc_stats: FantasyCalcStats
+    fantasy_calc_stats: FantasyCalcStats | None
+    waiver_stats: WaiverExtraStats | None = None
 
