@@ -106,6 +106,7 @@ def fetch_waiver_player(player_id: str, week: int, side: str = "get"):
     waiver_stats = fetch_waiver_stats(player_id)
 
     return TradeWaiverPlayer(
+        player_id=player_id,
         name=name,
         side=side,
         info=info,
@@ -148,6 +149,7 @@ def fetch_roster_players(player_ids: str, week: int) -> list[RosterPlayer]:
         waiver_stats = fetch_waiver_stats(player_id)
 
         players.append(RosterPlayer(
+            player_id=player_id,
             name=name,
             info=info,
             ros_ranking=ros,

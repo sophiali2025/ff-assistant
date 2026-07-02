@@ -157,7 +157,8 @@ IMPORTANT: Never mention the numeric "value" from fantasyCalc stats directly.
 Use relative language instead (e.g. "worth more than double", "significantly more valuable").
 All other stats (rankings, positions, trends, recent_adds, last_3_avg, snap_share) can be cited numerically.
 
-If recommending to add, suggest 1-3 droppable players from the roster (prioritize worst value/performance).
+If recommending to add, you MUST suggest 1-3 droppable players from the roster (prioritize worst value/performance).
+Each roster player has a "player_id" field - use these exact IDs in drop_player_ids.
 If not adding, drop_player_ids should be an empty list.
 
 Respond with ONLY valid JSON in this exact structure, no other text:
@@ -167,7 +168,7 @@ Respond with ONLY valid JSON in this exact structure, no other text:
   "drop_player_ids": ["player_id1", "player_id2"]
 }
 verdict must be exactly one of: add, don't add.
-drop_player_ids must be a list of 0-3 player IDs from the roster."""
+drop_player_ids must be a list of 0-3 player_id values from the roster (use the player_id field from each roster player)."""
 
 def parse_waiver_response(raw: str) -> dict:
     text = raw.strip()

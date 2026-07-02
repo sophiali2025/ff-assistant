@@ -105,6 +105,7 @@ class WaiverExtraStats(BaseModel):
     snap_share: float | None = None
 
 class TradeWaiverPlayer(BaseModel):
+    player_id: str
     name: str
     side: str | None = None           # "give" or "get", none = waiver player
     info: PlayerInfo
@@ -113,6 +114,7 @@ class TradeWaiverPlayer(BaseModel):
     waiver_stats: WaiverExtraStats | None = None
 
 class RosterPlayer(BaseModel):
+    player_id: str
     name: str
     info: PlayerInfo
     ros_ranking: dict | None

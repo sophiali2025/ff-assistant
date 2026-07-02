@@ -109,6 +109,7 @@ def get_trade_players(give_player_ids: str, get_player_ids: str, week: int) -> l
                 ros = None
 
             players.append(TradeWaiverPlayer(
+                player_id=player_id,
                 name=filtered["name"],
                 side=side,
                 info=filtered["info"],
@@ -130,6 +131,7 @@ def get_roster_info(player_ids: list[str], week: int) -> list[RosterPlayer]:
             ros = None
 
         players.append(RosterPlayer(
+            player_id=player_id,
             name=filtered["name"],
             info=filtered["info"],
             ros_ranking=ros,
