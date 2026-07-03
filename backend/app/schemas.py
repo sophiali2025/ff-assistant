@@ -122,3 +122,14 @@ class RosterPlayer(BaseModel):
     fantasy_calc_stats: FantasyCalcStats | None
     waiver_stats: WaiverExtraStats | None = None
 
+class DisplayStats(BaseModel):
+    player_id: str
+    name: str
+    position: str
+    team: str | None
+    age: float | None
+    projected_points: float
+    waiver_stats: WaiverExtraStats
+    overall_ranking: float | None
+    ros_ranking: dict | None
+

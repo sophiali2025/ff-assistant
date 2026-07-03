@@ -3,7 +3,7 @@ import nflreadpy as nfl
 from services.sleeper import get_recent_adds_week
 from services.fantasypros import get_player_points, get_player_projection
 from app.data import sleeper_fp_map, sleeper_all_players, fantasycalc_players, searchable_players
-from app.schemas import TradeWaiverPlayer, WaiverExtraStats, PlayerInfo, RosterPlayer
+from app.schemas import TradeWaiverPlayer, WaiverExtraStats, PlayerInfo, RosterPlayer, DisplayStats
 from routers.trades import fetch_player_filtered_stats, fetch_ros_player_ranking
 
 router = APIRouter()
@@ -184,13 +184,15 @@ def fetch_roster_players(player_ids: str, week: int) -> list[RosterPlayer]:
     return players
 
 
-@router.get("/display/{player_id}/{week}")
-def fetch_display_info(player_id: str, week: int):
-    """Get display player info after search."""
+@router.get("/display_stats/{player_id}/{week}", response_model=DisplayStats)
+def fetch_display_stats(player_id: str, week: int):
+    """Get display stats for a player including rankings and projections."""
     # Get player info from Sleeper
     player_info = sleeper_all_players.get(player_id)
     if player_info is None:
         raise HTTPException(status_code=404, detail=f"Player {player_id} not found")
+
+    full_name = player_info.get("full_name", "Unknown")
 
     # Get projected points from FantasyPros
     fp_id = sleeper_fp_map.get(player_id)
@@ -203,16 +205,35 @@ def fetch_display_info(player_id: str, week: int):
         except Exception:
             projected_points = 0.0
 
-    # Get waiver stats
+    # Get waiver stats (aggregates: recent_adds, last_3_avg, snap_share, player_owned_avg)
     waiver_stats = fetch_waiver_stats(player_id)
 
-    return {
-        "player_id": player_id,
-        "name": player_info.get("full_name", "Unknown"),
-        "position": player_info.get("position", "Unknown"),
-        "team": player_info.get("team"),
-        "age": player_info.get("age"),
-        "projected_points": projected_points,
-        "waiver_stats": waiver_stats,
-    }
+    # Get overall ranking from ff_rankings
+    overall_ranking = None
+    if full_name:
+        rankings = nfl.load_ff_rankings()
+        player_rankings = rankings.filter(rankings["player"] == full_name)
+        if not player_rankings.is_empty():
+            overall_ranking = player_rankings["ecr"][0]
+
+    # Get ROS overall ranking
+    ros_ranking = fetch_ros_player_ranking(player_id, week)
+    if isinstance(ros_ranking, dict) and "error" in ros_ranking:
+        ros_ranking = None
+
+    # Return schema
+    return DisplayStats(
+        player_id=player_id,
+        name=full_name,
+        position=player_info.get("position", "Unknown"),
+        team=player_info.get("team"),
+        age=player_info.get("age"),
+        projected_points=projected_points,
+        waiver_stats=waiver_stats,
+        overall_ranking=overall_ranking,
+        ros_ranking=ros_ranking,
+    )
+
+
+
 

@@ -68,8 +68,10 @@ def get_player_stats(player_id: str, week: int):
 
 ### Waiver Stats (routers/waivers.py)
 - `fetch_player_recent_adds(player_id)` → int | None
-- `fetch_player_last_3_games(player_id)` → float | None
-- `fetch_player_snap_share(player_id)` → float | None
+- `fetch_player_last_3_games(player_id)` → float | None (avg PPR points last 3 weeks)
+- `fetch_player_snap_share(player_id)` → float | None (avg snap % last 3 games)
+- `fetch_player_owned_avg(player_id)` → float | None (ownership percentage)
+- `fetch_waiver_stats(player_id)` → WaiverExtraStats (aggregates all above)
 
 ### Trade/Player Stats (routers/trades.py)
 - `fetch_player_filtered_stats(player_id)` → dict with name, info, fantasyCalc
@@ -79,6 +81,35 @@ def get_player_stats(player_id: str, week: int):
 ### Sleeper Data (routers/sleeper.py)
 - `fetch_roster(league_id, user_id)` → dict with players list
 - `fetch_league_type(league_id)` → dict with league type
+
+### NFLReadPy Data (import nflreadpy as nfl)
+Load data directly from nflreadpy for custom analysis. All functions return Polars DataFrames.
+
+**`nfl.load_snap_counts(seasons=2025)`**
+- Columns: player, week, offense_pct, defense_pct, special_teams_pct, etc.
+- Use case: Calculate snap share trends, usage patterns
+- Example: `snaps.filter(snaps["player"] == "Justin Jefferson").sort("week", descending=True).head(3)`
+
+**`nfl.load_ff_rankings()`**
+- Columns: player, pos, team, ecr (overall ranking), player_owned_avg, player_owned_espn, player_owned_yahoo, bye, etc.
+- Use case: Get current rankings and ownership data
+- Note: Snapshot data (no weekly history), no `seasons` parameter
+- Example: `rankings.filter(rankings["player"] == "CeeDee Lamb")["ecr"][0]`
+
+**`nfl.load_ff_opportunity()`**
+- 159 columns including: player_id, full_name, position, week, season, game_id
+- Attempts: pass_attempt, rec_attempt, rush_attempt
+- Stats: pass_yards_gained, rec_yards_gained, rush_yards_gained, receptions, touchdowns
+- Expected stats: *_exp versions of all stats (e.g., receptions_exp, rec_yards_gained_exp)
+- Fantasy points: pass_fantasy_points, rec_fantasy_points, rush_fantasy_points, total_fantasy_points
+- Team stats: All stats also available with _team suffix
+- Use case: Analyze opportunity trends, target share, expected vs actual performance
+- Example: `opp.filter(opp["full_name"] == "Tyreek Hill").sort("week", descending=True).head(3)`
+
+### FantasyPros Service (services/fantasypros.py)
+- `get_player_projection(week, fp_id)` → dict with player projection data
+- `get_player_rankings(fp_id, week)` → dict with player rankings
+- Note: Requires FantasyPros ID (fp_id), not Sleeper ID. Use `sleeper_fp_map.get(player_id)` to convert
 
 ## Example: WaiverExtraStats Endpoint
 
