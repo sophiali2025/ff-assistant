@@ -1,3 +1,9 @@
+---
+name: add-simple-endpoint
+description: Create a simple FastAPI endpoint that aggregates data from existing services
+user_invocable: true
+---
+
 # Add Simple FastAPI Endpoint
 
 Create a simple data-fetching endpoint that aggregates data from existing services/routers and returns it in a schema.

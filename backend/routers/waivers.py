@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Query, HTTPException
 import nflreadpy as nfl
 from services.sleeper import get_recent_adds_week
-from services.fantasypros import get_player_points
+from services.fantasypros import get_player_points, get_player_projection
 from app.data import sleeper_fp_map, sleeper_all_players, fantasycalc_players, searchable_players
 from app.schemas import TradeWaiverPlayer, WaiverExtraStats, PlayerInfo, RosterPlayer
 from routers.trades import fetch_player_filtered_stats, fetch_ros_player_ranking
@@ -48,7 +48,7 @@ def fetch_player_snap_share(player_id: str):
         return None
 
     # Load snap counts and filter to this player.
-    snaps = nfl.load_snap_counts(seasons=2024)
+    snaps = nfl.load_snap_counts(seasons=2025)
     player_snaps = snaps.filter(snaps["player"] == full_name)
 
     if player_snaps.is_empty():
@@ -61,17 +61,42 @@ def fetch_player_snap_share(player_id: str):
     return avg_pct
 
 
+@router.get("/player_owned_avg/{player_id}")
+def fetch_player_owned_avg(player_id: str):
+    # Look up the player's full name from Sleeper data.
+    player_info = sleeper_all_players.get(player_id)
+    if player_info is None:
+        return None
+    full_name = player_info.get("full_name")
+    if full_name is None:
+        return None
+
+    # Load fantasy football rankings and filter to this player.
+    rankings = nfl.load_ff_rankings()
+    player_rankings = rankings.filter(rankings["player"] == full_name)
+
+    if player_rankings.is_empty():
+        return None
+
+    # Get the player_owned_avg
+    player_owned_avg = player_rankings["player_owned_avg"][0]
+
+    return player_owned_avg
+
+
 @router.get("/waiver_stats/{player_id}", response_model=WaiverExtraStats)
 def fetch_waiver_stats(player_id: str):
     """Get all waiver-related stats for a player."""
     recent_adds = fetch_player_recent_adds(player_id)
     last_3_avg = fetch_player_last_3_games(player_id)
     snap_share = fetch_player_snap_share(player_id)
+    player_owned_avg = fetch_player_owned_avg(player_id)
 
     return WaiverExtraStats(
         recent_adds=recent_adds,
         last_3_avg=last_3_avg,
-        snap_share=snap_share
+        snap_share=snap_share,
+        player_owned_avg=player_owned_avg
     )
 
 
@@ -157,4 +182,37 @@ def fetch_roster_players(player_ids: str, week: int) -> list[RosterPlayer]:
             waiver_stats=waiver_stats,
         ))
     return players
+
+
+@router.get("/display/{player_id}/{week}")
+def fetch_display_info(player_id: str, week: int):
+    """Get display player info after search."""
+    # Get player info from Sleeper
+    player_info = sleeper_all_players.get(player_id)
+    if player_info is None:
+        raise HTTPException(status_code=404, detail=f"Player {player_id} not found")
+
+    # Get projected points from FantasyPros
+    fp_id = sleeper_fp_map.get(player_id)
+    projected_points = 0.0
+    if fp_id is not None:
+        try:
+            data = get_player_projection(week, fp_id)
+            player = data["players"][0]
+            projected_points = player["stats"]["points_ppr"]
+        except Exception:
+            projected_points = 0.0
+
+    # Get waiver stats
+    waiver_stats = fetch_waiver_stats(player_id)
+
+    return {
+        "player_id": player_id,
+        "name": player_info.get("full_name", "Unknown"),
+        "position": player_info.get("position", "Unknown"),
+        "team": player_info.get("team"),
+        "age": player_info.get("age"),
+        "projected_points": projected_points,
+        "waiver_stats": waiver_stats,
+    }
 

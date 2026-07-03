@@ -103,6 +103,7 @@ class WaiverExtraStats(BaseModel):
     recent_adds: int | None = None
     last_3_avg: float | None = None
     snap_share: float | None = None
+    player_owned_avg: float | None = None
 
 class TradeWaiverPlayer(BaseModel):
     player_id: str
