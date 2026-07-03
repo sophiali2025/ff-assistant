@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, ScrollView, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { searchPlayers, fetchDisplayStats } from '@/lib/api';
 
 type Player = {
   player_id: string;
@@ -13,11 +14,11 @@ type Player = {
 };
 
 type WaiverStats = {
-  overallRank: string;
   positionRank: string;
-  trueValue: number;
-  snapShare: string;
+  rosPositionRank: string;
   rostered: string;
+  snapShare: string;
+  recentAdds: string;
   avgLast3: number;
 };
 
@@ -39,11 +40,11 @@ const mockPlayer: Player = {
 };
 
 const mockStats: WaiverStats = {
-  overallRank: '52nd',
-  positionRank: '34th',
-  trueValue: 102,
-  snapShare: '78%',
+  positionRank: '52nd',
+  rosPositionRank: '34th',
   rostered: '37%',
+  snapShare: '78%',
+  recentAdds: '1,247',
   avgLast3: 15.7,
 };
 
@@ -61,10 +62,58 @@ export default function WaiverScreen() {
   const router = useRouter();
 
   const [searchText, setSearchText] = useState('');
-  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(mockPlayer);
-  const [stats, setStats] = useState<WaiverStats | null>(mockStats);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [stats, setStats] = useState<WaiverStats | null>(null);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<WaiverResult | null>(mockResult);
+  const [result, setResult] = useState<WaiverResult | null>(null);
+
+  // Search for players as the user types
+  useEffect(() => {
+    if (searchText.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    searchPlayers(searchText)
+      .then((data) => setSearchResults(data))
+      .catch(() => setSearchResults([]));
+  }, [searchText]);
+
+  const handlePlayerSelect = async (playerId: string) => {
+    setSearchText('');
+    setSearchResults([]);
+    setLoading(true);
+    setResult(null);
+
+    try {
+      const data = await fetchDisplayStats(playerId);
+
+      // Set selected player info
+      setSelectedPlayer({
+        player_id: data.player_id,
+        name: data.name,
+        position: data.position,
+        team: data.team,
+        age: data.age,
+        projected: data.projected_points,
+      });
+
+      // Set stats from waiver_stats and rankings
+      setStats({
+        positionRank: data.overall_ranking ? `${Math.round(data.overall_ranking)}` : 'N/A',
+        rosPositionRank: data.ros_ranking ? `${data.ros_ranking}` : 'N/A',
+        rostered: data.waiver_stats?.player_owned_avg ? `${data.waiver_stats.player_owned_avg}%` : 'N/A',
+        snapShare: data.waiver_stats?.snap_share ? `${data.waiver_stats.snap_share}%` : 'N/A',
+        recentAdds: data.waiver_stats?.recent_adds ? `${data.waiver_stats.recent_adds}` : 'N/A',
+        avgLast3: data.waiver_stats?.last_3_avg || 0,
+      });
+    } catch (error) {
+      console.error('Failed to fetch player stats:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleEvaluate = async () => {
     setLoading(true);
@@ -106,11 +155,44 @@ export default function WaiverScreen() {
           placeholderTextColor="#FFFFFF"
           value={searchText}
           onChangeText={setSearchText}
+          onBlur={() => {
+            // Delay clearing results so tap events can fire
+            setTimeout(() => setSearchResults([]), 150);
+          }}
         />
       </View>
 
+      {/* Search Results Dropdown */}
+      {searchResults.length > 0 && (
+        <ScrollView style={styles.searchDropdown} keyboardShouldPersistTaps="handled">
+          {searchResults.slice(0, 4).map((player, index) => (
+            <TouchableOpacity
+              key={player.player_id}
+              style={[
+                styles.searchResultRow,
+                index === Math.min(searchResults.length, 4) - 1 && { borderBottomWidth: 0 }
+              ]}
+              onPress={() => handlePlayerSelect(player.player_id)}
+            >
+              <Text style={styles.searchResultName}>{player.name}</Text>
+              <Text style={styles.searchResultPosition}>{player.position}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
+
+      {/* Empty State - Dashed Placeholder */}
+      {!selectedPlayer && !loading && (
+        <View style={styles.emptyCard} />
+      )}
+
       {/* Player Card */}
-      {selectedPlayer && stats && (
+      {loading && (
+        <View style={styles.loadingCard}>
+          <Text style={styles.loadingText}>Loading player stats...</Text>
+        </View>
+      )}
+      {!loading && selectedPlayer && stats && (
         <View style={styles.playerCard}>
           {/* Player Header */}
           <View style={styles.playerHeader}>
@@ -122,7 +204,7 @@ export default function WaiverScreen() {
               <Text style={styles.playerDetails}>{`${selectedPlayer.team}  | age ${selectedPlayer.age}`}</Text>
             </View>
             <View style={styles.projectedBox}>
-              <Text style={styles.projectedValue}>{selectedPlayer.projected}</Text>
+              <Text style={styles.projectedValue}>{selectedPlayer.projected.toFixed(1)}</Text>
               <Text style={styles.projectedLabel}>proj</Text>
             </View>
           </View>
@@ -133,16 +215,16 @@ export default function WaiverScreen() {
           <View style={styles.statsContainer}>
             <View style={styles.statsGrid}>
               <View style={[styles.statItem, { borderTopWidth: 0 }]}>
-                <Text style={styles.statValue}>{stats.overallRank}</Text>
-                <Text style={styles.statLabel}>overall ranking</Text>
-              </View>
-              <View style={[styles.statItem, { borderTopWidth: 0 }]}>
                 <Text style={styles.statValue}>{stats.positionRank}</Text>
-                <Text style={styles.statLabel}>position ranking</Text>
+                <Text style={styles.statLabel}>position rank</Text>
               </View>
               <View style={[styles.statItem, { borderTopWidth: 0 }]}>
-                <Text style={styles.statValue}>{stats.trueValue}</Text>
-                <Text style={styles.statLabel}>true value</Text>
+                <Text style={styles.statValue}>{stats.rosPositionRank}</Text>
+                <Text style={styles.statLabel}>ros position rank</Text>
+              </View>
+              <View style={[styles.statItem, { borderTopWidth: 0 }]}>
+                <Text style={styles.statValue}>{stats.rostered}</Text>
+                <Text style={styles.statLabel}>rostered</Text>
               </View>
             </View>
 
@@ -152,8 +234,8 @@ export default function WaiverScreen() {
                 <Text style={styles.statLabel}>snap share</Text>
               </View>
               <View style={[styles.statItem, { borderBottomWidth: 0 }]}>
-                <Text style={styles.statValue}>{stats.rostered}</Text>
-                <Text style={styles.statLabel}>rostered</Text>
+                <Text style={styles.statValue}>{stats.recentAdds}</Text>
+                <Text style={styles.statLabel}>recent adds</Text>
               </View>
               <View style={[styles.statItem, { borderBottomWidth: 0, borderBottomRightRadius: 15 }]}>
                 <Text style={styles.statValue}>{stats.avgLast3}</Text>
@@ -164,14 +246,15 @@ export default function WaiverScreen() {
         </View>
       )}
 
-      {/* Evaluate Button */}
+      {/* Analyze Button */}
       <TouchableOpacity
-        style={styles.evaluateButton}
+        style={[styles.evaluateButton, !selectedPlayer && styles.evaluateButtonDisabled]}
         activeOpacity={0.7}
         onPress={handleEvaluate}
+        disabled={!selectedPlayer}
       >
-        <Text style={styles.evaluateText}>
-          {loading ? 'Evaluating ...' : 'Evaluate Player'}
+        <Text style={[styles.evaluateText, !selectedPlayer && styles.evaluateTextDisabled]}>
+          Analyze Player
         </Text>
       </TouchableOpacity>
 
@@ -259,7 +342,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     height: 34,
     paddingHorizontal: 14,
-    marginBottom: 20,
+    marginBottom: 2,
   },
   searchIcon: {
     marginRight: 8,
@@ -270,12 +353,64 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontFamily: 'Inter',
   },
+  searchDropdown: {
+    backgroundColor: '#362C58',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#A1C4F9',
+    marginTop: 4,
+    marginBottom: 10,
+    maxHeight: 176,
+  },
+  searchResultRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(161, 196, 249, 0.15)',
+  },
+  searchResultName: {
+    fontSize: 14,
+    color: '#FFFFFF',
+  },
+  searchResultPosition: {
+    fontSize: 12,
+    color: '#A1C4F9',
+  },
+  emptyCard: {
+    backgroundColor: '#1B2F4F',
+    borderWidth: 1,
+    borderColor: '#A1C4F9',
+    borderStyle: 'dashed',
+    borderRadius: 15,
+    height: 166,
+    marginTop: 9,
+  },
+  loadingCard: {
+    backgroundColor: '#1B2F4F',
+    borderWidth: 1,
+    borderColor: '#A1C4F9',
+    borderStyle: 'dashed',
+    borderRadius: 15,
+    height: 166,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 9,
+  },
+  loadingText: {
+    fontSize: 13,
+    color: '#FFFFFF',
+    fontFamily: 'Inter',
+  },
   playerCard: {
     backgroundColor: '#375481',
     borderWidth: 1,
     borderColor: '#A1C4F9',
     borderRadius: 15,
-    padding: 16
+    padding: 16,
+    marginTop: 9,
   },
   playerHeader: {
     flexDirection: 'row',
@@ -482,9 +617,15 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 16,
   },
+  evaluateButtonDisabled: {
+    opacity: 0.49,
+  },
   evaluateText: {
     fontSize: 15,
     fontWeight: 'bold',
     color: '#FFFFFF',
+  },
+  evaluateTextDisabled: {
+    opacity: 0.7,
   },
 });

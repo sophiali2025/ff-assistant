@@ -214,6 +214,14 @@ export async function searchPlayers(query) {
   return await response.json();
 }
 
+// Fetch complete display stats for a player (for waiver screen).
+// Returns player info, projected points, waiver stats, and rankings.
+export async function fetchDisplayStats(playerId, week = WEEK) {
+  const response = await fetch(`${API_URL}/waivers/display_stats/${playerId}/${week}`);
+  if (!response.ok) throw new Error(`Display stats failed: ${response.status}`);
+  return await response.json();
+}
+
 // Send trade player IDs to Claude for evaluation. Returns a verdict
 // (accept/decline/counter) and a summary explanation.
 export async function evaluateTrade(givePlayerIds, getPlayerIds) {

@@ -131,5 +131,5 @@ class DisplayStats(BaseModel):
     projected_points: float
     waiver_stats: WaiverExtraStats
     overall_ranking: float | None
-    ros_ranking: dict | None
+    ros_ranking: int | None
 

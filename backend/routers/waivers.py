@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Query, HTTPException
 import nflreadpy as nfl
 from services.sleeper import get_recent_adds_week
-from services.fantasypros import get_player_points, get_player_projection
+from services.fantasypros import get_player_points, get_player_projection, get_player_rankings
 from app.data import sleeper_fp_map, sleeper_all_players, fantasycalc_players, searchable_players
 from app.schemas import TradeWaiverPlayer, WaiverExtraStats, PlayerInfo, RosterPlayer, DisplayStats
 from routers.trades import fetch_player_filtered_stats, fetch_ros_player_ranking
@@ -208,18 +208,27 @@ def fetch_display_stats(player_id: str, week: int):
     # Get waiver stats (aggregates: recent_adds, last_3_avg, snap_share, player_owned_avg)
     waiver_stats = fetch_waiver_stats(player_id)
 
-    # Get overall ranking from ff_rankings
+    # Get rankings from FantasyPros (both overall and ROS)
     overall_ranking = None
-    if full_name:
-        rankings = nfl.load_ff_rankings()
-        player_rankings = rankings.filter(rankings["player"] == full_name)
-        if not player_rankings.is_empty():
-            overall_ranking = player_rankings["ecr"][0]
+    ros_ranking = None
+    fp_id = sleeper_fp_map.get(player_id)
+    position = player_info.get("position")
+    if fp_id is not None and position:
+        try:
+            rankings_data = get_player_rankings(fp_id, week)
+            ecr = rankings_data["players"][0]["rank"].get("ECR", {})
 
-    # Get ROS overall ranking
-    ros_ranking = fetch_ros_player_ranking(player_id, week)
-    if isinstance(ros_ranking, dict) and "error" in ros_ranking:
-        ros_ranking = None
+            # Get overall ranking (current week PPR position ranking)
+            ppr_rank = ecr.get("PPR", {})
+            if isinstance(ppr_rank, dict):
+                overall_ranking = ppr_rank.get(position)
+
+            # Get ROS position ranking
+            ros_ppr = ecr.get("ROS-PPR", {})
+            if isinstance(ros_ppr, dict):
+                ros_ranking = ros_ppr.get(position)
+        except Exception:
+            pass
 
     # Return schema
     return DisplayStats(
