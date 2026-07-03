@@ -20,7 +20,7 @@ const MENU_ITEMS = [
     title: 'Waiver Pickup',
     subtitle: 'Find best adds for your roster',
     icon: 'person-add-outline' as const,
-    href: null,
+    href: '/waiver' as const,
   },
   {
     title: 'Injury Impact',
