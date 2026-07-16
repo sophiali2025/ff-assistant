@@ -49,7 +49,7 @@ const mockStats: WaiverStats = {
 };
 
 const mockResult: WaiverResult = {
-  verdict: 'add',
+  verdict: 'Add',
   summary: 'Add him.',
   reasoning: 'Good pickup. You have WR depth and can gain a solid RB2 while adding RB depth.',
   dropPlayers: [
