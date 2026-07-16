@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, ScrollView, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { searchPlayers, fetchDisplayStats } from '@/lib/api';
+import { searchPlayers, fetchDisplayStats, evaluateWaiver } from '@/lib/api';
 
 type Player = {
   player_id: string;
@@ -23,7 +23,7 @@ type WaiverStats = {
 };
 
 type WaiverResult = {
-  verdict: 'add' | "don't add";
+  verdict: 'Add' | "Don't Add";
   summary: string;
   reasoning: string;
   dropPlayers: Player[];
@@ -66,6 +66,7 @@ export default function WaiverScreen() {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [stats, setStats] = useState<WaiverStats | null>(null);
   const [loading, setLoading] = useState(false);
+  const [evaluating, setEvaluating] = useState(false);
   const [result, setResult] = useState<WaiverResult | null>(null);
 
   // Search for players as the user types
@@ -116,14 +117,34 @@ export default function WaiverScreen() {
   };
 
   const handleEvaluate = async () => {
-    setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setSelectedPlayer(mockPlayer);
-      setStats(mockStats);
-      setResult(mockResult);
-      setLoading(false);
-    }, 1000);
+    if (!selectedPlayer) return;
+
+    setEvaluating(true);
+    setResult(null);
+
+    try {
+      const data = await evaluateWaiver(selectedPlayer.player_id);
+
+      // Map the backend response to frontend format
+      setResult({
+        verdict: data.verdict,
+        summary: data.summary,
+        reasoning: data.summary, // Using summary as reasoning
+        dropPlayers: data.drop_players.map((p: any) => ({
+          player_id: p.player_id,
+          name: p.name,
+          position: p.info?.position || '??',
+          team: p.info?.team || '??',
+          age: p.info?.age || 0,
+          projected: p.projected_points || 0,
+        })),
+      });
+    } catch (error) {
+      console.error('Failed to evaluate waiver:', error);
+      // Could show an error message to the user here
+    } finally {
+      setEvaluating(false);
+    }
   };
 
   const getPositionColor = (position: string) => {
@@ -251,10 +272,10 @@ export default function WaiverScreen() {
         style={[styles.evaluateButton, !selectedPlayer && styles.evaluateButtonDisabled]}
         activeOpacity={0.7}
         onPress={handleEvaluate}
-        disabled={!selectedPlayer}
+        disabled={!selectedPlayer || evaluating}
       >
         <Text style={[styles.evaluateText, !selectedPlayer && styles.evaluateTextDisabled]}>
-          Analyze Player
+          {evaluating ? 'Analyzing player ...' : 'Analyze Player'}
         </Text>
       </TouchableOpacity>
 
@@ -262,20 +283,32 @@ export default function WaiverScreen() {
       {result && (
         <View style={styles.suggestionBox}>
           <View style={styles.suggestionHeader}>
-            <View style={styles.verdictBadge}>
-              <Ionicons name="checkmark-circle" size={30} color="#6BE3B5" />
+            <View style={[
+              styles.verdictBadge,
+              result.verdict === "Don't Add" && styles.verdictBadgeDecline
+            ]}>
+              <Ionicons
+                name={result.verdict === "Add" ? "checkmark-circle" : "close-circle-outline"}
+                size={32}
+                color={result.verdict === "Add" ? "#6BE3B5" : "#E36B6B"}
+              />
             </View>
             <View style={styles.suggestionTextBox}>
-              <Text style={styles.suggestionTitle}>{result.summary}</Text>
+              <Text style={styles.suggestionTitle}>{result.verdict}</Text>
               <Text style={styles.suggestionSubtitle}>
-                {result.dropPlayers.map(p => p.name.split(' ')[1]).join(', ')}
+                {result.verdict === "Add"
+                  ? `${selectedPlayer && selectedPlayer.name.split(' ')[1]} > ${result.dropPlayers.map(p => p.name.split(' ')[1]).join(', ')}`
+                  : `${selectedPlayer && selectedPlayer.name.split(' ')[1]} < Roster`
+                }
               </Text>
             </View>
           </View>
 
           <View style={styles.dividerLine} />
 
-          <Text style={styles.suggestionReasoning}>{result.reasoning}</Text>
+          <Text style={styles.suggestionReasoning}>
+            {result.reasoning}
+          </Text>
         </View>
       )}
 
@@ -294,7 +327,7 @@ export default function WaiverScreen() {
                 <Text style={styles.dropPlayerDetails}>{`${player.team}  | age ${player.age}`}</Text>
               </View>
               <View style={styles.dropProjectedBox}>
-                <Text style={styles.dropProjectedValue}>{player.projected}</Text>
+                <Text style={styles.dropProjectedValue}>{player.projected.toFixed(1)}</Text>
                 <Text style={styles.dropProjectedLabel}>proj</Text>
               </View>
             </View>
@@ -523,6 +556,10 @@ const styles = StyleSheet.create({
     borderColor: '#6BE3B5',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  verdictBadgeDecline: {
+    backgroundColor: '#8F2F2F',
+    borderColor: '#E36B6B',
   },
   suggestionTextBox: {
     flex: 1,

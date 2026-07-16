@@ -173,6 +173,17 @@ def fetch_roster_players(player_ids: str, week: int) -> list[RosterPlayer]:
 
         waiver_stats = fetch_waiver_stats(player_id)
 
+        # Get projected points from FantasyPros
+        fp_id = sleeper_fp_map.get(player_id)
+        projected_points = 0.0
+        if fp_id is not None:
+            try:
+                data = get_player_projection(week, fp_id)
+                player = data["players"][0]
+                projected_points = player["stats"]["points_ppr"]
+            except Exception:
+                projected_points = 0.0
+
         players.append(RosterPlayer(
             player_id=player_id,
             name=name,
@@ -180,6 +191,7 @@ def fetch_roster_players(player_ids: str, week: int) -> list[RosterPlayer]:
             ros_ranking=ros,
             fantasy_calc_stats=fantasy_calc_stats,
             waiver_stats=waiver_stats,
+            projected_points=projected_points,
         ))
     return players
 

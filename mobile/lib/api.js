@@ -240,3 +240,21 @@ export async function evaluateTrade(givePlayerIds, getPlayerIds) {
   if (!response.ok) throw new Error(`Trade eval failed: ${response.status}`);
   return await response.json();
 }
+
+// Send waiver player ID to Claude for evaluation. Returns a verdict
+// (add/don't add), summary, and suggested drop players.
+export async function evaluateWaiver(playerId) {
+  const response = await fetch(`${API_URL}/ai/evaluate_waiver/claude`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      player: playerId,
+      league_id: LEAGUE_ID,
+      user_id: USER_ID,
+      season: SEASON,
+      current_week: WEEK,
+    }),
+  });
+  if (!response.ok) throw new Error(`Waiver eval failed: ${response.status}`);
+  return await response.json();
+}

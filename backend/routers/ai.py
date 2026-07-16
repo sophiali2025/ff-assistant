@@ -163,11 +163,11 @@ If not adding, drop_player_ids should be an empty list.
 
 Respond with ONLY valid JSON in this exact structure, no other text:
 {
-  "verdict": "add",
+  "verdict": "Add",
   "summary": "2-3 sentence explanation of your verdict",
   "drop_player_ids": ["player_id1", "player_id2"]
 }
-verdict must be exactly one of: add, don't add.
+verdict must be exactly one of: Add, Don't Add.
 drop_player_ids must be a list of 0-3 player_id values from the roster (use the player_id field from each roster player)."""
 
 def parse_waiver_response(raw: str) -> dict:
