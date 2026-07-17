@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, TouchableOpacity, ScrollView, TextInput } from 
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { searchPlayers, fetchDisplayStats, evaluateWaiver } from '@/lib/api';
+import PlayerStatsCard from '@/components/PlayerStatsCard';
 
 type Player = {
   player_id: string;
@@ -29,34 +30,6 @@ type WaiverResult = {
   dropPlayers: Player[];
 };
 
-// Mock data for demo
-const mockPlayer: Player = {
-  player_id: '1234',
-  name: 'Malik Davis',
-  position: 'RB',
-  team: 'DAL',
-  age: 27,
-  projected: 9.2,
-};
-
-const mockStats: WaiverStats = {
-  positionRank: '52nd',
-  rosPositionRank: '34th',
-  rostered: '37%',
-  snapShare: '78%',
-  recentAdds: '1,247',
-  avgLast3: 15.7,
-};
-
-const mockResult: WaiverResult = {
-  verdict: 'Add',
-  summary: 'Add him.',
-  reasoning: 'Good pickup. You have WR depth and can gain a solid RB2 while adding RB depth.',
-  dropPlayers: [
-    { player_id: '001', name: 'Kimani Vidal', position: 'RB', team: 'LAC', age: 24, projected: 6.3 },
-    { player_id: '002', name: 'Blake Corum', position: 'RB', team: 'LAR', age: 25, projected: 8.4 },
-  ],
-};
 
 export default function WaiverScreen() {
   const router = useRouter();
@@ -243,57 +216,12 @@ export default function WaiverScreen() {
         </View>
       )}
       {!loading && selectedPlayer && stats && (
-        <View style={styles.playerCard}>
-          {/* Player Header */}
-          <View style={styles.playerHeader}>
-            <View style={[styles.positionBadge, { backgroundColor: getPositionColor(selectedPlayer.position) }]}>
-              <Text style={styles.positionText}>{selectedPlayer.position}</Text>
-            </View>
-            <View style={styles.playerInfo}>
-              <Text style={styles.playerName}>{selectedPlayer.name}</Text>
-              <Text style={styles.playerDetails}>{`${selectedPlayer.team}  | age ${selectedPlayer.age}`}</Text>
-            </View>
-            <View style={styles.projectedBox}>
-              <Text style={styles.projectedValue}>{selectedPlayer.projected.toFixed(1)}</Text>
-              <Text style={styles.projectedLabel}>proj</Text>
-            </View>
-          </View>
-
-          <View style={styles.solidDivider} />
-
-          {/* Stats Grid */}
-          <View style={styles.statsContainer}>
-            <View style={styles.statsGrid}>
-              <View style={[styles.statItem, { borderTopWidth: 0 }]}>
-                <Text style={styles.statValue}>{stats.positionRank}</Text>
-                <Text style={styles.statLabel}>position rank</Text>
-              </View>
-              <View style={[styles.statItem, { borderTopWidth: 0 }]}>
-                <Text style={styles.statValue}>{stats.rosPositionRank}</Text>
-                <Text style={styles.statLabel}>ros position rank</Text>
-              </View>
-              <View style={[styles.statItem, { borderTopWidth: 0 }]}>
-                <Text style={styles.statValue}>{stats.rostered}</Text>
-                <Text style={styles.statLabel}>rostered</Text>
-              </View>
-            </View>
-
-            <View style={[styles.statsGrid, { marginTop: -1 }]}>
-              <View style={[styles.statItem, { borderBottomWidth: 0, borderBottomLeftRadius: 15 }]}>
-                <Text style={styles.statValue}>{stats.snapShare}</Text>
-                <Text style={styles.statLabel}>snap share</Text>
-              </View>
-              <View style={[styles.statItem, { borderBottomWidth: 0 }]}>
-                <Text style={styles.statValue}>{stats.recentAdds}</Text>
-                <Text style={styles.statLabel}>recent adds</Text>
-              </View>
-              <View style={[styles.statItem, { borderBottomWidth: 0, borderBottomRightRadius: 15 }]}>
-                <Text style={styles.statValue}>{stats.avgLast3}</Text>
-                <Text style={styles.statLabel}>avg last 3</Text>
-              </View>
-            </View>
-          </View>
-        </View>
+        <PlayerStatsCard
+          player={selectedPlayer}
+          stats={stats}
+          getPositionColor={getPositionColor}
+          size="default"
+        />
       )}
 
       {/* Analyze Button */}
@@ -371,38 +299,13 @@ export default function WaiverScreen() {
                 {/* Expanded Stats */}
                 {isExpanded && expandedPlayerStats && (
                   <>
-                    <View style={styles.solidDivider} />
-                    <View style={styles.statsContainerSmall}>
-                      <View style={[styles.statsGrid, { width: '100%' }]}>
-                        <View style={[styles.statItemSmall, { borderTopWidth: 0 }]}>
-                          <Text style={styles.statValueSmall}>{expandedPlayerStats.positionRank}</Text>
-                          <Text style={styles.statLabelSmall}>position rank</Text>
-                        </View>
-                        <View style={[styles.statItemSmall, { borderTopWidth: 0 }]}>
-                          <Text style={styles.statValueSmall}>{expandedPlayerStats.rosPositionRank}</Text>
-                          <Text style={styles.statLabelSmall}>ros position rank</Text>
-                        </View>
-                        <View style={[styles.statItemSmall, { borderTopWidth: 0 }]}>
-                          <Text style={styles.statValueSmall}>{expandedPlayerStats.rostered}</Text>
-                          <Text style={styles.statLabelSmall}>rostered</Text>
-                        </View>
-                      </View>
-
-                      <View style={[styles.statsGrid, { marginTop: -1, width: '100%' }]}>
-                        <View style={[styles.statItemSmall, { borderBottomWidth: 0, borderBottomLeftRadius: 10 }]}>
-                          <Text style={styles.statValueSmall}>{expandedPlayerStats.snapShare}</Text>
-                          <Text style={styles.statLabelSmall}>snap share</Text>
-                        </View>
-                        <View style={[styles.statItemSmall, { borderBottomWidth: 0 }]}>
-                          <Text style={styles.statValueSmall}>{expandedPlayerStats.recentAdds}</Text>
-                          <Text style={styles.statLabelSmall}>recent adds</Text>
-                        </View>
-                        <View style={[styles.statItemSmall, { borderBottomWidth: 0, borderBottomRightRadius: 10 }]}>
-                          <Text style={styles.statValueSmall}>{expandedPlayerStats.avgLast3}</Text>
-                          <Text style={styles.statLabelSmall}>avg last 3</Text>
-                        </View>
-                      </View>
-                    </View>
+                    <View style={styles.dropDivider} />
+                    <PlayerStatsCard
+                      player={player}
+                      stats={expandedPlayerStats}
+                      getPositionColor={getPositionColor}
+                      size="small"
+                    />
                   </>
                 )}
               </View>
@@ -516,112 +419,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontFamily: 'Inter',
   },
-  playerCard: {
-    backgroundColor: '#375481',
-    borderWidth: 1,
-    borderColor: '#A1C4F9',
-    borderRadius: 15,
-    padding: 16,
-    marginTop: 9,
-  },
-  playerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  positionBadge: {
-    width: 35,
-    height: 35,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  positionText: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  playerInfo: {
-    flex: 1,
-    marginLeft: 10,
-  },
-  playerName: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  playerDetails: {
-    fontSize: 10,
-    color: '#C1C1C1',
-    marginTop: 2,
-  },
-  projectedBox: {
-    alignItems: 'flex-end',
-  },
-  projectedValue: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  projectedLabel: {
-    fontSize: 11,
-    color: '#D4D4D4',
-  },
-  statsContainer: {
-    position: 'relative',
-    marginHorizontal: -16,
-    marginBottom: -16,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'flex-start',
-    padding: 12,
-    backgroundColor: '#375481',
-    borderWidth: 1,
-    borderColor: '#A1C4F9',
-    marginLeft: -1,
-  },
-  statValue: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#8572B1',
-  },
-  statLabel: {
-    fontSize: 8,
-    color: '#C1C1C1',
-    marginTop: 4,
-  },
-  statsContainerSmall: {
-    position: 'relative',
-    marginHorizontal: 0,
-    marginBottom: -1,
-    width: '100%',
-  },
-  statItemSmall: {
-    flex: 1,
-    flexBasis: 0,
-    flexGrow: 1,
-    flexShrink: 1,
-    alignItems: 'flex-start',
-    padding: 10,
-    backgroundColor: '#152D53',
-    borderWidth: 1,
-    borderColor: '#A1C4F9',
-    marginLeft: -1,
-  },
-  statValueSmall: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#8572B1',
-  },
-  statLabelSmall: {
-    fontSize: 8,
-    color: '#C1C1C1',
-    marginTop: 3,
-  },
   dividerLine: {
     height: 1,
     backgroundColor: '#A1C4F9',
@@ -717,6 +514,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
+  },
+  dropDivider: {
+    height: 1,
+    backgroundColor: '#A1C4F9',
   },
   positionBadgeSmall: {
     width: 30,
