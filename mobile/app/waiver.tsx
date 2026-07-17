@@ -68,6 +68,8 @@ export default function WaiverScreen() {
   const [loading, setLoading] = useState(false);
   const [evaluating, setEvaluating] = useState(false);
   const [result, setResult] = useState<WaiverResult | null>(null);
+  const [expandedDropPlayer, setExpandedDropPlayer] = useState<string | null>(null);
+  const [expandedPlayerStats, setExpandedPlayerStats] = useState<WaiverStats | null>(null);
 
   // Search for players as the user types
   useEffect(() => {
@@ -147,6 +149,31 @@ export default function WaiverScreen() {
     }
   };
 
+  const handleDropPlayerClick = async (playerId: string) => {
+    // If clicking the same player, collapse it
+    if (expandedDropPlayer === playerId) {
+      setExpandedDropPlayer(null);
+      setExpandedPlayerStats(null);
+      return;
+    }
+
+    // Otherwise, expand this player and fetch their stats
+    setExpandedDropPlayer(playerId);
+    try {
+      const data = await fetchDisplayStats(playerId);
+      setExpandedPlayerStats({
+        positionRank: data.overall_ranking ? `${Math.round(data.overall_ranking)}` : 'N/A',
+        rosPositionRank: data.ros_ranking ? `${data.ros_ranking}` : 'N/A',
+        rostered: data.waiver_stats?.player_owned_avg ? `${data.waiver_stats.player_owned_avg}%` : 'N/A',
+        snapShare: data.waiver_stats?.snap_share ? `${data.waiver_stats.snap_share}%` : 'N/A',
+        recentAdds: data.waiver_stats?.recent_adds ? `${data.waiver_stats.recent_adds}` : 'N/A',
+        avgLast3: data.waiver_stats?.last_3_avg || 0,
+      });
+    } catch (error) {
+      console.error('Failed to fetch drop player stats:', error);
+    }
+  };
+
   const getPositionColor = (position: string) => {
     const colors: { [key: string]: string } = {
       QB: '#6C8EBF',
@@ -160,10 +187,12 @@ export default function WaiverScreen() {
   return (
     <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={28} color="#A1C4F9" />
-        </TouchableOpacity>
-        <Text style={styles.title}>Waivers</Text>
+        <View style={styles.headerLeft}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="chevron-back" size={28} color="#A1C4F9" />
+          </TouchableOpacity>
+          <Text style={styles.title}>Waivers</Text>
+        </View>
         <Text style={styles.weekText}>Wk 9 - synced</Text>
       </View>
 
@@ -317,21 +346,68 @@ export default function WaiverScreen() {
         <View style={styles.dropBox}>
           <Text style={styles.dropTitle}>who to drop</Text>
 
-          {result.dropPlayers.map((player, index) => (
-            <View key={index} style={styles.dropPlayerCard}>
-              <View style={[styles.positionBadgeSmall, { backgroundColor: getPositionColor(player.position) }]}>
-                <Text style={styles.positionTextSmall}>{player.position}</Text>
+          {result.dropPlayers.map((player, index) => {
+            const isExpanded = expandedDropPlayer === player.player_id;
+            return (
+              <View key={index} style={[styles.dropPlayerCard, isExpanded && styles.dropPlayerCardExpanded]}>
+                <TouchableOpacity
+                  style={styles.dropPlayerHeader}
+                  onPress={() => handleDropPlayerClick(player.player_id)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.positionBadgeSmall, { backgroundColor: getPositionColor(player.position) }]}>
+                    <Text style={styles.positionTextSmall}>{player.position}</Text>
+                  </View>
+                  <View style={styles.dropPlayerInfo}>
+                    <Text style={styles.dropPlayerName}>{player.name}</Text>
+                    <Text style={styles.dropPlayerDetails}>{`${player.team}  | age ${player.age}`}</Text>
+                  </View>
+                  <View style={styles.dropProjectedBox}>
+                    <Text style={styles.dropProjectedValue}>{player.projected.toFixed(1)}</Text>
+                    <Text style={styles.dropProjectedLabel}>proj</Text>
+                  </View>
+                </TouchableOpacity>
+
+                {/* Expanded Stats */}
+                {isExpanded && expandedPlayerStats && (
+                  <>
+                    <View style={styles.solidDivider} />
+                    <View style={styles.statsContainerSmall}>
+                      <View style={[styles.statsGrid, { width: '100%' }]}>
+                        <View style={[styles.statItemSmall, { borderTopWidth: 0 }]}>
+                          <Text style={styles.statValueSmall}>{expandedPlayerStats.positionRank}</Text>
+                          <Text style={styles.statLabelSmall}>position rank</Text>
+                        </View>
+                        <View style={[styles.statItemSmall, { borderTopWidth: 0 }]}>
+                          <Text style={styles.statValueSmall}>{expandedPlayerStats.rosPositionRank}</Text>
+                          <Text style={styles.statLabelSmall}>ros position rank</Text>
+                        </View>
+                        <View style={[styles.statItemSmall, { borderTopWidth: 0 }]}>
+                          <Text style={styles.statValueSmall}>{expandedPlayerStats.rostered}</Text>
+                          <Text style={styles.statLabelSmall}>rostered</Text>
+                        </View>
+                      </View>
+
+                      <View style={[styles.statsGrid, { marginTop: -1, width: '100%' }]}>
+                        <View style={[styles.statItemSmall, { borderBottomWidth: 0, borderBottomLeftRadius: 10 }]}>
+                          <Text style={styles.statValueSmall}>{expandedPlayerStats.snapShare}</Text>
+                          <Text style={styles.statLabelSmall}>snap share</Text>
+                        </View>
+                        <View style={[styles.statItemSmall, { borderBottomWidth: 0 }]}>
+                          <Text style={styles.statValueSmall}>{expandedPlayerStats.recentAdds}</Text>
+                          <Text style={styles.statLabelSmall}>recent adds</Text>
+                        </View>
+                        <View style={[styles.statItemSmall, { borderBottomWidth: 0, borderBottomRightRadius: 10 }]}>
+                          <Text style={styles.statValueSmall}>{expandedPlayerStats.avgLast3}</Text>
+                          <Text style={styles.statLabelSmall}>avg last 3</Text>
+                        </View>
+                      </View>
+                    </View>
+                  </>
+                )}
               </View>
-              <View style={styles.dropPlayerInfo}>
-                <Text style={styles.dropPlayerName}>{player.name}</Text>
-                <Text style={styles.dropPlayerDetails}>{`${player.team}  | age ${player.age}`}</Text>
-              </View>
-              <View style={styles.dropProjectedBox}>
-                <Text style={styles.dropProjectedValue}>{player.projected.toFixed(1)}</Text>
-                <Text style={styles.dropProjectedLabel}>proj</Text>
-              </View>
-            </View>
-          ))}
+            );
+          })}
         </View>
       )}
     </ScrollView>
@@ -347,14 +423,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   backButton: {
-    marginLeft: -20,
-    marginRight: -40,
+    marginRight: 8,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'baseline',
     marginBottom: 20,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   title: {
     fontFamily: 'Jaro',
@@ -515,6 +594,34 @@ const styles = StyleSheet.create({
     color: '#C1C1C1',
     marginTop: 4,
   },
+  statsContainerSmall: {
+    position: 'relative',
+    marginHorizontal: 0,
+    marginBottom: -1,
+    width: '100%',
+  },
+  statItemSmall: {
+    flex: 1,
+    flexBasis: 0,
+    flexGrow: 1,
+    flexShrink: 1,
+    alignItems: 'flex-start',
+    padding: 10,
+    backgroundColor: '#152D53',
+    borderWidth: 1,
+    borderColor: '#A1C4F9',
+    marginLeft: -1,
+  },
+  statValueSmall: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#8572B1',
+  },
+  statLabelSmall: {
+    fontSize: 8,
+    color: '#C1C1C1',
+    marginTop: 3,
+  },
   dividerLine: {
     height: 1,
     backgroundColor: '#A1C4F9',
@@ -596,14 +703,20 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   dropPlayerCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: '#152D53',
     borderWidth: 1,
     borderColor: '#A1C4F9',
     borderRadius: 10,
-    padding: 12,
     marginBottom: 8,
+    overflow: 'hidden',
+  },
+  dropPlayerCardExpanded: {
+    // Keep same dark blue background
+  },
+  dropPlayerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
   },
   positionBadgeSmall: {
     width: 30,
