@@ -1,6 +1,7 @@
 import os
 import httpx
 from dotenv import load_dotenv
+import nflreadpy as nfl
 
 load_dotenv()
 
@@ -60,3 +61,27 @@ def get_player_points():
     response.raise_for_status()
 
     return response.json()
+
+def get_exp_point_nflreadpy(full_name: str, week: int):
+    """Get a player's expected fantasy points from nflreadpy FF opportunity data.
+
+    Args:
+        full_name: Player's full name (e.g., "Ja'Marr Chase")
+        week: Week number
+
+    Returns:
+        float: Expected fantasy points (total_fantasy_points_exp) or None if not found
+    """
+    # Load FF opportunity data for the current season
+    df = nfl.load_ff_opportunity(seasons=int(SEASON), stat_type="weekly")
+
+    # Filter by player name and week
+    player_data = df.filter(
+        (df["full_name"] == full_name) & (df["week"] == float(week))
+    )
+
+    # Return expected points if found
+    if player_data.height > 0:
+        return player_data["total_fantasy_points_exp"][0]
+
+    return None

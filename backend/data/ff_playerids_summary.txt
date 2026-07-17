@@ -1,0 +1,76 @@
+FF PLAYER IDS SUMMARY
+==================================================
+
+Shape: 12467 rows x 35 columns
+
+Columns:
+  - mfl_id
+  - sportradar_id
+  - fantasypros_id
+  - gsis_id
+  - pff_id
+  - sleeper_id
+  - nfl_id
+  - espn_id
+  - yahoo_id
+  - fleaflicker_id
+  - cbs_id
+  - pfr_id
+  - cfbref_id
+  - rotowire_id
+  - rotoworld_id
+  - ktc_id
+  - stats_id
+  - stats_global_id
+  - fantasy_data_id
+  - swish_id
+  - name
+  - merge_name
+  - position
+  - team
+  - birthdate
+  - age
+  - draft_year
+  - draft_round
+  - draft_pick
+  - draft_ovr
+  - twitter_username
+  - height
+  - weight
+  - college
+  - db_season
+
+Sample data (first 20 rows):
+shape: (20, 35)
+┌────────┬──────────────┬──────────────┬───────────┬───┬────────┬────────┬─────────────┬───────────┐
+│ mfl_id ┆ sportradar_i ┆ fantasypros_ ┆ gsis_id   ┆ … ┆ height ┆ weight ┆ college     ┆ db_season │
+│ ---    ┆ d            ┆ id           ┆ ---       ┆   ┆ ---    ┆ ---    ┆ ---         ┆ ---       │
+│ i64    ┆ ---          ┆ ---          ┆ str       ┆   ┆ i64    ┆ i64    ┆ str         ┆ i64       │
+│        ┆ str          ┆ str          ┆           ┆   ┆        ┆        ┆             ┆           │
+╞════════╪══════════════╪══════════════╪═══════════╪═══╪════════╪════════╪═════════════╪═══════════╡
+│ 17462  ┆ b1ded115-092 ┆ null         ┆ MEN516487 ┆ … ┆ 77     ┆ 225    ┆ Indiana     ┆ 2026      │
+│        ┆ a-4199-9a55- ┆              ┆           ┆   ┆        ┆        ┆             ┆           │
+│        ┆ cab9f4…      ┆              ┆           ┆   ┆        ┆        ┆             ┆           │
+│ 17463  ┆ 2e62e603-363 ┆ null         ┆ SIM639376 ┆ … ┆ 74     ┆ 203    ┆ Alabama     ┆ 2026      │
+│        ┆ a-425f-8c57- ┆              ┆           ┆   ┆        ┆        ┆             ┆           │
+│        ┆ 0a1600…      ┆              ┆           ┆   ┆        ┆        ┆             ┆           │
+│ 17464  ┆ null         ┆ null         ┆ null      ┆ … ┆ null   ┆ null   ┆ Mississippi ┆ 2026      │
+│ 17465  ┆ 9fc8bed4-d9d ┆ null         ┆ NUS440041 ┆ … ┆ 73     ┆ 205    ┆ LSU         ┆ 2026      │
+│        ┆ b-46a2-a75f- ┆              ┆           ┆   ┆        ┆        ┆             ┆           │
+│        ┆ 737881…      ┆              ┆           ┆   ┆        ┆        ┆             ┆           │
+│ 17466  ┆ null         ┆ null         ┆ BEC122142 ┆ … ┆ null   ┆ 233    ┆ Miami       ┆ 2026      │
+│ …      ┆ …            ┆ …            ┆ …         ┆ … ┆ …      ┆ …      ┆ …           ┆ …         │
+│ 17477  ┆ 0ff54d6c-4d2 ┆ null         ┆ COL293648 ┆ … ┆ 69     ┆ 228    ┆ Washington  ┆ 2026      │
+│        ┆ a-4974-9815- ┆              ┆           ┆   ┆        ┆        ┆             ┆           │
+│        ┆ b889e7…      ┆              ┆           ┆   ┆        ┆        ┆             ┆           │
+│ 17478  ┆ 7980dd2b-0ce ┆ null         ┆ ALL532376 ┆ … ┆ 71     ┆ 217    ┆ Penn State  ┆ 2026      │
+│        ┆ 0-4936-aaff- ┆              ┆           ┆   ┆        ┆        ┆             ┆           │
+│        ┆ 536c09…      ┆              ┆           ┆   ┆        ┆        ┆             ┆           │
+│ 17479  ┆ null         ┆ null         ┆ null      ┆ … ┆ 71     ┆ 210    ┆ Texas A&M   ┆ 2026      │
+│ 17480  ┆ 261750e0-419 ┆ null         ┆ OTT017302 ┆ … ┆ 71     ┆ 208    ┆ Oklahoma    ┆ 2026      │
+│        ┆ 9-11f1-bbb5- ┆              ┆           ┆   ┆        ┆        ┆             ┆           │
+│        ┆ 8b6de4…      ┆              ┆           ┆   ┆        ┆        ┆             ┆           │
+│ 17481  ┆ b17d816a-b68 ┆ null         ┆ CLA041524 ┆ … ┆ 70     ┆ 188    ┆ Wake Forest ┆ 2026      │
+│        ┆ 7-488f-ac03- ┆              ┆           ┆   ┆        ┆        ┆             ┆           │
+│        ┆ 7dcba5…      ┆              ┆           ┆   ┆        ┆        ┆             ┆           │
+└────────┴──────────────┴──────────────┴───────────┴───┴────────┴────────┴─────────────┴───────────┘

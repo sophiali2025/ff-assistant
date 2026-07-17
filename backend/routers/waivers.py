@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Query, HTTPException
 import nflreadpy as nfl
 from services.sleeper import get_recent_adds_week
-from services.fantasypros import get_player_points, get_player_projection, get_player_rankings
+from services.fantasypros import get_player_points, get_player_projection, get_player_rankings, get_exp_point_nflreadpy
 from app.data import sleeper_fp_map, sleeper_all_players, fantasycalc_players, searchable_players
 from app.schemas import TradeWaiverPlayer, WaiverExtraStats, PlayerInfo, RosterPlayer, DisplayStats
 from routers.trades import fetch_player_filtered_stats, fetch_ros_player_ranking
@@ -173,16 +173,18 @@ def fetch_roster_players(player_ids: str, week: int) -> list[RosterPlayer]:
 
         waiver_stats = fetch_waiver_stats(player_id)
 
-        # Get projected points from FantasyPros
-        fp_id = sleeper_fp_map.get(player_id)
+        # Get projected points from nflreadpy
+        player_info = sleeper_all_players.get(player_id)
         projected_points = 0.0
-        if fp_id is not None:
-            try:
-                data = get_player_projection(week, fp_id)
-                player = data["players"][0]
-                projected_points = player["stats"]["points_ppr"]
-            except Exception:
-                projected_points = 0.0
+        if player_info:
+            full_name = player_info.get("full_name")
+            if full_name:
+                try:
+                    projected_points = get_exp_point_nflreadpy(full_name, week)
+                    if projected_points is None:
+                        projected_points = 0.0
+                except Exception:
+                    projected_points = 0.0
 
         players.append(RosterPlayer(
             player_id=player_id,
@@ -206,16 +208,14 @@ def fetch_display_stats(player_id: str, week: int):
 
     full_name = player_info.get("full_name", "Unknown")
 
-    # Get projected points from FantasyPros
-    fp_id = sleeper_fp_map.get(player_id)
+    # Get projected points from nflreadpy
     projected_points = 0.0
-    if fp_id is not None:
-        try:
-            data = get_player_projection(week, fp_id)
-            player = data["players"][0]
-            projected_points = player["stats"]["points_ppr"]
-        except Exception:
+    try:
+        projected_points = get_exp_point_nflreadpy(full_name, week)
+        if projected_points is None:
             projected_points = 0.0
+    except Exception:
+        projected_points = 0.0
 
     # Get waiver stats (aggregates: recent_adds, last_3_avg, snap_share, player_owned_avg)
     waiver_stats = fetch_waiver_stats(player_id)
