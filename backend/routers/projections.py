@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from services.sleeper import get_rosters
-from services.fantasypros import get_player_projection, get_batch_projections, get_player_news
+from services.fantasypros import get_player_projection, get_batch_projections, get_player_news, get_exp_point_nflreadpy
 from services.tank01 import get_player_projection_t1, get_team_projection_t1
 from app.data import sleeper_fp_map, sleepr_tank01_map, sleeper_all_players
 
@@ -12,41 +12,37 @@ router = APIRouter()
 # /projection/{player_id}/{week} would match "batch" as a player_id.
 @router.get("/projection/batch/{week}")
 def fetch_batch_projections(week: int, sleeper_ids: str):
-    """Fetch projections for multiple players in one API call.
+    """Fetch projections for multiple players using nflreadpy (or FantasyPros for K/DEF).
     sleeper_ids is a colon-separated string of Sleeper player IDs."""
     id_list = sleeper_ids.split(":")
+    result = {}
 
-    # Convert Sleeper IDs to FantasyPros IDs, skipping any without a mapping.
-    fp_ids = []
-    sleeper_to_fp = {}
-    for sid in id_list:
-        fp_id = sleeper_fp_map.get(sid)
-        if fp_id:
-            fp_ids.append(fp_id)
-            sleeper_to_fp[fp_id] = sid
+    for player_id in id_list:
+        # Get player info from Sleeper data
+        player_info = sleeper_all_players.get(player_id)
+        if not player_info:
+            result[player_id] = 0
+            continue
 
-    if not fp_ids:
-        return {"projections": {sid: 0 for sid in id_list}}
+        # For defenses, construct full_name from first_name + last_name
+        # (e.g., "New Orleans Saints")
+        full_name = player_info.get("full_name")
+        if not full_name:
+            first = player_info.get("first_name", "")
+            last = player_info.get("last_name", "")
+            full_name = f"{first} {last}".strip()
+            if not full_name:
+                result[player_id] = 0
+                continue
 
-    try:
-        data = get_batch_projections(week, fp_ids)
-        # Build a lookup from fp_id -> projected points
-        result = {}
-        for player in data.get("players", []):
-            fp_id = str(player["fpid"])
-            pts = player.get("stats", {}).get("points_ppr", 0)
-            sid = sleeper_to_fp.get(fp_id)
-            if sid:
-                result[sid] = pts
+        try:
+            # Get expected points (routes to FantasyPros for K/DEF, nflreadpy for others)
+            projected_points = get_exp_point_nflreadpy(full_name, week, player_id)
+            result[player_id] = projected_points if projected_points is not None else 0
+        except Exception:
+            result[player_id] = 0
 
-        # Fill in 0 for any player we couldn't get projections for
-        for sid in id_list:
-            if sid not in result:
-                result[sid] = 0
-
-        return {"projections": result}
-    except Exception as e:
-        return {"projections": {sid: 0 for sid in id_list}, "error": str(e)}
+    return {"projections": result}
 
 @router.get("/projection/roster/{league_id}/{roster_id}/{week}")
 def fetch_all_starters_projection(league_id: str, roster_id: int, week: int):
@@ -66,18 +62,29 @@ def fetch_all_starters_projection(league_id: str, roster_id: int, week: int):
         "projected_points": round(total_projected, 2),
     }
 
+# use nflreadpy for most positions, FantasyPros for K/DEF
 @router.get("/projection/{player_id}/{week}")
 def fetch_projection(player_id: str, week: int):
-    # player_id is a Sleeper ID — look up the FantasyPros ID from the mapping.
-    fp_id = sleeper_fp_map.get(player_id)
-    if fp_id is None:
-        return {"projected_points": 0, "error": f"No FantasyPros mapping for {player_id}"}
+    # player_id is a Sleeper ID — get the player's full name
+    player_info = sleeper_all_players.get(player_id)
+    if player_info is None:
+        return {"projected_points": 0, "error": f"No player found for {player_id}"}
+
+    # For defenses, construct full_name from first_name + last_name
+    full_name = player_info.get("full_name")
+    if not full_name:
+        first = player_info.get("first_name", "")
+        last = player_info.get("last_name", "")
+        full_name = f"{first} {last}".strip()
+        if not full_name:
+            return {"projected_points": 0, "error": f"No full_name for player {player_id}"}
 
     try:
-        data = get_player_projection(week, fp_id)
-        player = data["players"][0]
+        projected_points = get_exp_point_nflreadpy(full_name, week, player_id)
+        if projected_points is None:
+            projected_points = 0.0
         return {
-            "projected_points": player["stats"]["points_ppr"],
+            "projected_points": projected_points,
         }
     except Exception as e:
         return {"projected_points": 0, "error": str(e)}

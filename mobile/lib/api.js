@@ -13,7 +13,7 @@ const SEASON = 2025
 
 // Toggle this to enable/disable projection API calls.
 // Set to false to avoid burning API calls during development.
-const PROJECTIONS_ENABLED = false;
+const PROJECTIONS_ENABLED = true;
 
 // --- What is fetch? ---
 // fetch() is built into JavaScript. It makes HTTP requests (like

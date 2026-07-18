@@ -116,8 +116,8 @@ export default function StartSitScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#A1C4F9" />
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="chevron-back" size={28} color="#A1C4F9" />
           </TouchableOpacity>
           <Text style={styles.title}>Start/Sit</Text>
         </View>
@@ -284,6 +284,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 50,
     paddingBottom: 8,
+  },
+  backButton: {
+    marginRight: 8,
   },
   headerLeft: {
     flexDirection: 'row',

@@ -58,10 +58,12 @@ export default function TradeScreen() {
   return (
     <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={28} color="#A1C4F9" />
-        </TouchableOpacity>
-        <Text style={styles.title}>Trade Analyzer</Text>
+        <View style={styles.headerLeft}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="chevron-back" size={28} color="#A1C4F9" />
+          </TouchableOpacity>
+          <Text style={styles.title}>Trade Analyzer</Text>
+        </View>
         <Text style={styles.weekText}>Wk 9 - synced</Text>
       </View>
 
@@ -127,14 +129,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,      // Side padding to match the Figma layout
   },
   backButton: {
-    marginLeft: -20,            // Push the chevron further left, past the container padding
-    marginRight: -40
+    marginRight: 8,
   },
   header: {
     flexDirection: 'row',       // Lay children out horizontally (left to right)
     justifyContent: 'space-between', // Push title left, week text right
     alignItems: 'baseline',     // Align text baselines so different font sizes sit on the same line
     marginBottom: 20,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   title: {
     fontFamily: 'Jaro',        // Custom font loaded in app/_layout.tsx

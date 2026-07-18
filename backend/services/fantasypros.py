@@ -62,23 +62,58 @@ def get_player_points():
 
     return response.json()
 
-def get_exp_point_nflreadpy(full_name: str, week: int):
-    """Get a player's expected fantasy points from nflreadpy FF opportunity data.
+def get_exp_point_nflreadpy(full_name: str, week: int, player_id: str = None):
+    """Get a player's expected fantasy points from nflreadpy FF opportunity data,
+    or FantasyPros for kickers and defense.
 
     Args:
         full_name: Player's full name (e.g., "Ja'Marr Chase")
         week: Week number
+        player_id: Sleeper player ID (optional, needed for K/DEF routing)
 
     Returns:
-        float: Expected fantasy points (total_fantasy_points_exp) or None if not found
+        float: Expected fantasy points or None if not found
     """
+    from app.data import sleeper_all_players, sleeper_fp_map
+
+    # Check if this is a kicker or defense - route to FantasyPros
+    if player_id:
+        player_info = sleeper_all_players.get(player_id)
+        if player_info:
+            position = player_info.get("position")
+            if position in ["K", "PK", "DEF"]:
+                # Use FantasyPros for kickers and defense
+                fp_id = sleeper_fp_map.get(player_id)
+                if fp_id:
+                    try:
+                        data = get_player_projection(week, fp_id)
+                        # Parse FantasyPros response to extract projected points
+                        # Response structure: {"players": [{"stats": {"points": 5.49}}]}
+                        if "players" in data and len(data["players"]) > 0:
+                            player = data["players"][0]
+                            if "stats" in player and "points" in player["stats"]:
+                                return float(player["stats"]["points"])
+                    except Exception:
+                        return None
+                return None
+
+    # Use nflreadpy for all other positions
     # Load FF opportunity data for the current season
     df = nfl.load_ff_opportunity(seasons=int(SEASON), stat_type="weekly")
 
-    # Filter by player name and week
-    player_data = df.filter(
-        (df["full_name"] == full_name) & (df["week"] == float(week))
-    )
+    # Filter by week first to reduce dataset size
+    week_data = df.filter(df["week"] == float(week))
+
+    # Try exact match first
+    player_data = week_data.filter(week_data["full_name"] == full_name)
+
+    # If no exact match, try matching with suffixes (Jr., Sr., III, etc.)
+    if player_data.height == 0:
+        # Try adding common suffixes
+        for suffix in [" Jr.", " Sr.", " II", " III", " IV", " V"]:
+            player_data = week_data.filter(week_data["full_name"] == full_name + suffix)
+            if player_data.height > 0:
+                break
 
     # Return expected points if found
     if player_data.height > 0:

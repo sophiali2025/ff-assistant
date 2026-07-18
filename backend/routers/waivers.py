@@ -8,6 +8,9 @@ from routers.trades import fetch_player_filtered_stats, fetch_ros_player_ranking
 
 router = APIRouter()
 
+# Cache for player points data to avoid repeated API calls
+_player_points_cache = None
+
 
 @router.get("/player_recent_adds/{player_id}")
 def fetch_player_recent_adds(player_id: str):
@@ -19,12 +22,22 @@ def fetch_player_recent_adds(player_id: str):
 
 @router.get("/player_last_3_games/{player_id}")
 def fetch_player_last_3_games(player_id: str):
+    global _player_points_cache
+
     # player_id is a Sleeper ID — look up the FantasyPros ID from the mapping.
     fp_id = sleeper_fp_map.get(player_id)
     if fp_id is None:
         return {"error": f"No FantasyPros mapping for {player_id}"}
-    
-    data = get_player_points()
+
+    # Use cached data if available, otherwise fetch and cache it
+    try:
+        if _player_points_cache is None:
+            _player_points_cache = get_player_points()
+        data = _player_points_cache
+    except Exception as e:
+        # If API call fails, return None instead of crashing
+        return None
+
     players = data.get("players", [])
     for entry in players:
         if str(entry["player_id"]) == str(fp_id):
@@ -173,14 +186,20 @@ def fetch_roster_players(player_ids: str, week: int) -> list[RosterPlayer]:
 
         waiver_stats = fetch_waiver_stats(player_id)
 
-        # Get projected points from nflreadpy
+        # Get projected points (routes to FantasyPros for K/DEF, nflreadpy for others)
         player_info = sleeper_all_players.get(player_id)
         projected_points = 0.0
         if player_info:
+            # For defenses, construct full_name from first_name + last_name
             full_name = player_info.get("full_name")
+            if not full_name:
+                first = player_info.get("first_name", "")
+                last = player_info.get("last_name", "")
+                full_name = f"{first} {last}".strip()
+
             if full_name:
                 try:
-                    projected_points = get_exp_point_nflreadpy(full_name, week)
+                    projected_points = get_exp_point_nflreadpy(full_name, week, player_id)
                     if projected_points is None:
                         projected_points = 0.0
                 except Exception:
@@ -208,10 +227,10 @@ def fetch_display_stats(player_id: str, week: int):
 
     full_name = player_info.get("full_name", "Unknown")
 
-    # Get projected points from nflreadpy
+    # Get projected points (routes to FantasyPros for K/DEF, nflreadpy for others)
     projected_points = 0.0
     try:
-        projected_points = get_exp_point_nflreadpy(full_name, week)
+        projected_points = get_exp_point_nflreadpy(full_name, week, player_id)
         if projected_points is None:
             projected_points = 0.0
     except Exception:

@@ -24,8 +24,8 @@ const parseNum = (val: string) => parseFloat(val.replace(/[^0-9.]/g, ''));
 
 // Calculate a fixed width for each pill, scaled proportionally.
 // When invert is true, smaller numbers get bigger pills.
-const MIN_PILL = 25;
-const MAX_PILL = 75;
+const MIN_PILL = 30;
+const MAX_PILL = 70;
 const pillWidth = (val: string, allValues: string[], invert = false) => {
   const nums = allValues.map(parseNum);
   const max = Math.max(...nums);
