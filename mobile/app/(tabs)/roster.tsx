@@ -5,6 +5,7 @@ import { View } from '@/components/default/Themed';
 import Header from '@/components/Header';
 import WeeklyMatch from '@/components/WeeklyMatch';
 import RosterList from '@/components/RosterList';
+import ProfileDropdown from '@/components/ProfileDropdown';
 import { fetchMatchup, fetchRoster } from '@/lib/api';
 
 // --- useState and useEffect ---
@@ -27,6 +28,9 @@ export default function RosterScreen() {
   const [matchup, setMatchup] = useState<any>(null);
   const [roster, setRoster] = useState<any>(null);
 
+  // State to control the profile dropdown visibility
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+
   // useEffect with [] runs once when the screen loads.
   // Both fetches fire at the same time (in parallel) — we don't
   // await one before starting the other, so the screen loads faster.
@@ -42,7 +46,11 @@ export default function RosterScreen() {
 
   return (
     <View style={styles.container}>
-      <Header week={matchup?.week ?? 0} initials="SL" />
+      <Header
+        week={matchup?.week ?? 0}
+        initials="SL"
+        onAvatarPress={() => setShowProfileDropdown(true)}
+      />
 
       {/* While matchup is null, show a spinner. Once data arrives, show WeeklyMatch. */}
       {matchup === null ? (
@@ -64,6 +72,11 @@ export default function RosterScreen() {
       ) : (
         <RosterList players={roster} />
       )}
+
+      <ProfileDropdown
+        visible={showProfileDropdown}
+        onClose={() => setShowProfileDropdown(false)}
+      />
     </View>
   );
 }

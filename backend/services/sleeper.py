@@ -53,8 +53,14 @@ def get_users_in_league(league_id: str):
 def get_recent_adds_week():
     response = httpx.get(f"{SLEEPER_BASE_URL}/players/nfl/trending/add?lookback_hours=168&limit=200")
     response.raise_for_status()
-    
+
     return response.json()
 
-    
+def get_user_leagues(user_id: str, season: str):
+    response = httpx.get(f"{SLEEPER_BASE_URL}/user/{user_id}/leagues/nfl/{season}")
+    response.raise_for_status()
+
+    return response.json()
+
+
 

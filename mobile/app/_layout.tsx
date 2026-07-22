@@ -25,6 +25,8 @@ export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     Jaro: require('../assets/fonts/Jaro-Regular.ttf'),
+    Jaldi: require('../assets/fonts/Jaldi-Regular.ttf'),
+    'Jaldi-Bold': require('../assets/fonts/Jaldi-Bold.ttf'),
     ...FontAwesome.font,
   });
 
@@ -52,6 +54,7 @@ function RootLayoutNav() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="startsit" options={{ headerShown: false }} />
         <Stack.Screen name="trade" options={{ headerShown: false }} />

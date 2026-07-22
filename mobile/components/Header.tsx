@@ -1,21 +1,23 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
 // --- What are Props? ---
 // Props are the inputs to your component, like function parameters.
 // Here we define what data the Header needs from its parent:
 //   - `week`: which NFL week to display
 //   - `initials`: the user's initials for the avatar circle
+//   - `onAvatarPress`: callback function when avatar is tapped
 type HeaderProps = {
   week: number;
   initials: string;
+  onAvatarPress?: () => void;  // Optional callback for avatar tap
 };
 
 // --- What is a Component? ---
 // A component is just a function that returns JSX (the HTML-like syntax).
-// The curly braces in the parameter `{ week, initials }` are called
+// The curly braces in the parameter `{ week, initials, onAvatarPress }` are called
 // "destructuring" — it unpacks the props object so you can use
 // `week` directly instead of `props.week`.
-export default function Header({ week, initials }: HeaderProps) {
+export default function Header({ week, initials, onAvatarPress }: HeaderProps) {
   return (
     // View = a container box (like <div> in web HTML).
     // `style` takes an array — styles later in the array override earlier ones.
@@ -26,10 +28,20 @@ export default function Header({ week, initials }: HeaderProps) {
 
       {/* Right side: week label + avatar grouped together */}
       <View style={styles.rightSection}>
-        {/* The avatar is a View styled as a circle with text centered inside */}
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initials}</Text>
-        </View>
+        {/*
+          TouchableOpacity: Makes the avatar tappable
+          When tapped, it calls the onAvatarPress function passed from parent
+          activeOpacity: Reduces opacity to 0.7 when pressed (visual feedback)
+        */}
+        <TouchableOpacity
+          onPress={onAvatarPress}
+          activeOpacity={0.7}
+          disabled={!onAvatarPress}  // Disable if no callback provided
+        >
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{initials}</Text>
+          </View>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -65,7 +77,7 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,            // half of width/height = perfect circle
     borderColor: '#A1C4F9',  
-    backgroundColor: '#5A7DB5',  // blue-gray from the Figma design
+    backgroundColor: '#597db4',  // blue-gray from the Figma design
     alignItems: 'center',        // center text horizontally inside
     justifyContent: 'center',    // center text vertically inside
   },

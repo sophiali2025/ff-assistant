@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from services.sleeper import get_user, get_rosters, get_matchups, get_users_in_league, get_league
+from services.sleeper import get_user, get_rosters, get_matchups, get_users_in_league, get_league, get_user_leagues
 from app.data import sleeper_all_players
 
 router = APIRouter()
@@ -17,6 +17,11 @@ def fetch_user(username: str):
 def get_user_id(username: str):
     user = get_user(username)
     return {"user_id": user["user_id"]}
+
+@router.get("/user/{user_id}/leagues/{season}")
+def fetch_user_leagues(user_id: str, season: str):
+    """Get all NFL leagues for a user in a specific season."""
+    return get_user_leagues(user_id, season)
 
 # league info
 @router.get("/league/scoring_settings/{league_id}")
