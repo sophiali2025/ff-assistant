@@ -1,4 +1,6 @@
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
+import { useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 /**
  * Auth Layout Component
@@ -11,6 +13,22 @@ import { Stack } from 'expo-router';
  * with push/pop transitions.
  */
 export default function AuthLayout() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+  const segments = useSegments();
+
+  // Redirect logged-in users away from auth screens
+  useEffect(() => {
+    if (loading) return; // Don't redirect while checking auth
+
+    const inAuth = segments[0] === '(auth)';
+
+    if (user && inAuth) {
+      // User is logged in but on auth screen - redirect to roster
+      router.replace('/(tabs)/roster');
+    }
+  }, [user, loading, segments]);
+
   return (
     <Stack
       screenOptions={{

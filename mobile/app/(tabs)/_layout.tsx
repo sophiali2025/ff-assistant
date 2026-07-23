@@ -1,9 +1,26 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Ionicons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter, useSegments } from 'expo-router';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function TabLayout() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+  const segments = useSegments();
+
+  // Protect tabs - redirect to login if not authenticated
+  useEffect(() => {
+    if (loading) return; // Don't redirect while checking auth
+
+    const inTabs = segments[0] === '(tabs)';
+
+    if (!user && inTabs) {
+      // User is not logged in but trying to access tabs - redirect to login
+      router.replace('/(auth)/login');
+    }
+  }, [user, loading, segments]);
+
   return (
     <Tabs
       screenOptions={{
@@ -28,20 +45,6 @@ export default function TabLayout() {
         options={{
           title: 'AI',
           tabBarIcon: ({ color }) => <Ionicons name="sparkles-outline" size={24} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="startsit"
-        options={{
-          title: 'League',
-          tabBarIcon: ({ color }) => <Ionicons name="people-outline" size={24} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="matchup"
-        options={{
-          title: 'News',
-          tabBarIcon: ({ color }) => <Ionicons name="document-text-outline" size={24} color={color} />,
         }}
       />
     </Tabs>

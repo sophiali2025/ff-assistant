@@ -4,9 +4,11 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { View, ActivityIndicator } from 'react-native';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/default/useColorScheme';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -45,21 +47,32 @@ export default function RootLayout() {
     return null;
   }
 
-  return <RootLayoutNav />;
+  // wrap RootLayoutNav in AuthProvider so that RootLayoutNav
+  // (and all its children) can access auth state via useAuth().
+
+  return (
+    <AuthProvider>
+      <RootLayoutNav />
+    </AuthProvider>
+  );
 }
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
 
+  // Register all screens - auth protection happens via redirects in layouts
+  // Only register top-level screens here. Screens inside (tabs) and (auth)
+  // are registered by their respective layouts.
+
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="startsit" options={{ headerShown: false }} />
-        <Stack.Screen name="trade" options={{ headerShown: false }} />
-        <Stack.Screen name="waiver" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="startsit" />
+        <Stack.Screen name="trade" />
+        <Stack.Screen name="waiver" />
       </Stack>
     </ThemeProvider>
   );

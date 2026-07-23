@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Header from '@/components/Header';
+import ProfileDropdown from '@/components/ProfileDropdown';
 
 const MENU_ITEMS = [
   {
@@ -32,10 +34,15 @@ const MENU_ITEMS = [
 
 export default function AiScreen() {
   const router = useRouter();
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
 
   return (
     <View style={styles.container}>
-      <Header week={0} initials="SL" />
+      <Header
+        week={0}
+        initials="SL"
+        onAvatarPress={() => setShowProfileDropdown(true)}
+      />
 
       <ScrollView style={styles.scroll}>
         {/* Main box */}
@@ -68,6 +75,11 @@ export default function AiScreen() {
           <Ionicons name="arrow-forward" size={20} color="#A1C4F9" />
         </TouchableOpacity>
       </ScrollView>
+
+      <ProfileDropdown
+        visible={showProfileDropdown}
+        onClose={() => setShowProfileDropdown(false)}
+      />
     </View>
   );
 }

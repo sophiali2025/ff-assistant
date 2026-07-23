@@ -7,8 +7,7 @@ import {
   TouchableWithoutFeedback,
   StyleSheet,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 
 type ProfileDropdownProps = {
   visible: boolean;
@@ -21,19 +20,23 @@ export default function ProfileDropdown({
   onClose,
   position = { top: 100, right: 20 },
 }: ProfileDropdownProps) {
-  const router = useRouter();
+  // REACT CONCEPT: Using Custom Hook in Component
+  // ----------------------------------------------
+  // We call useAuth() to get access to the signOut function.
+  // This is better than importing supabase directly because:
+  // 1. Centralized — all auth logic lives in AuthContext
+  // 2. Automatic navigation — signOut triggers SIGNED_OUT event,
+  //    which updates auth state, which triggers re-render in _layout.tsx
+  // 3. Easier to test and maintain
+
+  const { signOut } = useAuth();
 
   const handleLogout = async () => {
     try {
       console.log('Logging out user...');
-      const { error } = await supabase.auth.signOut();
+      await signOut();
 
-      if (error) {
-        console.error('Logout error:', error);
-      } else {
-        onClose();
-        router.replace('/(auth)/login');
-      }
+      onClose();
     } catch (error) {
       console.error('Unexpected logout error:', error);
     }

@@ -29,6 +29,12 @@ export default function LoginScreen() {
   /**
    * Handle the login process
    * Uses Supabase's signInWithPassword method
+   *
+   * IMPORTANT: No manual navigation needed!
+   * When login succeeds, the AuthContext listener automatically
+   * updates the auth state, and _layout.tsx conditional rendering
+   * switches to show the app screens. This is the React way —
+   * let state changes trigger UI updates.
    */
   const handleLogin = async () => {
     if (!email || !password) {
@@ -46,30 +52,14 @@ export default function LoginScreen() {
 
       if (error) {
         Alert.alert('Login Failed', error.message);
-      } else {
-        // On success, navigate to main app (roster is the first tab)
-        router.replace('/(tabs)/roster');
       }
+      // No else block needed! Navigation happens automatically via AuthContext
     } catch (error) {
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');
       console.error('Login error:', error);
     } finally {
       setLoading(false);
     }
-  };
-
-  /**
-   * TEMPORARY DEVELOPMENT BYPASS
-   *
-   * TODO: REMOVE THIS FUNCTION WHEN SUPABASE AUTH IS CONFIGURED
-   *
-   * This function allows bypassing authentication during development
-   * when Supabase hasn't been set up yet. Simply navigates to the
-   * main app without requiring valid credentials.
-   */
-  const handleDevBypass = () => {
-    console.warn('🚧 DEV BYPASS: Skipping authentication');
-    router.replace('/(tabs)/roster');
   };
 
   return (
@@ -132,27 +122,6 @@ export default function LoginScreen() {
             <Text style={styles.signupLink}>sign up</Text>
           </TouchableOpacity>
         </View>
-
-        {/*
-          ⚠️ TEMPORARY DEV BYPASS BUTTON ⚠️
-
-          TODO: DELETE THIS ENTIRE SECTION WHEN SUPABASE IS CONFIGURED
-
-          This button allows you to skip authentication during development.
-          To remove:
-          1. Delete this entire TouchableOpacity component
-          2. Delete the handleDevBypass function above
-          3. Delete the devBypassButton style below
-        */}
-        <TouchableOpacity
-          style={styles.devBypassButton}
-          onPress={handleDevBypass}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.devBypassText}>
-            🚧 Skip Login (Dev Only) 🚧
-          </Text>
-        </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
@@ -246,23 +215,5 @@ const styles = StyleSheet.create({
     fontFamily: 'Jaldi-Bold',
     fontSize: 20,
     color: '#9F98EE',
-  },
-  // ⚠️ TODO: DELETE THESE STYLES WHEN REMOVING DEV BYPASS ⚠️
-  devBypassButton: {
-    position: 'absolute',
-    bottom: 40,
-    backgroundColor: '#FF6B35',  // Orange warning color
-    borderWidth: 2,
-    borderColor: '#FFD700',  // Gold border for visibility
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-  },
-  devBypassText: {
-    fontFamily: 'Jaldi-Bold',
-    fontSize: 14,
-    color: '#FFFFFF',
-    textAlign: 'center',
   },
 });
