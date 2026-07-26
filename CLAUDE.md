@@ -40,14 +40,25 @@ No test runner, linter, or formatter is currently configured for either app.
 - **Fonts**: Custom fonts (Jaro, Inter) loaded in `app/_layout.tsx`
 
 Route groups:
-- `app/(tabs)/` — Main tab screens (roster, ai, startsit, matchup)
+- `app/(tabs)/` — Main tab screens (roster, ai)
 - `app/(auth)/` — Login/signup screens
-- `app/trade.tsx`, `app/startsit.tsx` — Stack screens navigated to from tabs
+- `app/(onboarding)/` — Onboarding flow for new users (username input, league selection)
+- `app/trade.tsx`, `app/startsit.tsx`, `app/waiver.tsx` — Stack screens navigated to from tabs
+
+Auth & Onboarding:
+- Global auth state managed via `AuthContext` (in `contexts/AuthContext.tsx`)
+- `useAuth()` hook provides `user`, `session`, `loading`, and `signOut()`
+- Protected routes via redirects in layout files
+- Onboarding check queries `users` table to determine if user has completed setup
+- New users → username screen → league picker → database insert → roster screen
+- Returning users → login → roster screen (skip onboarding)
 
 API layer (`lib/api.js`):
 - All backend calls go through this file using `fetch()` with `EXPO_PUBLIC_API_URL`
-- Hardcoded user/league constants at the top (will be dynamic later)
+- **Dynamic user data**: `getActiveUserData()` queries Supabase database for user's Sleeper IDs
+- Fetches `sleeper_user_id` from `users` table and active league's `league_id`/`sleeper_roster_id` from `leagues` table
 - Uses `Promise.all()` for parallel requests where possible
+- Onboarding API calls use Sleeper public API directly (no backend proxy)
 
 ### Backend
 
@@ -58,6 +69,35 @@ API layer (`lib/api.js`):
 - **Static data**: `app/data.py` loads player databases and ID mappings from `data/` files at startup (no database)
 - **Services**: `services/` contains external API integrations (sleeper, fantasypros, claude, tank01, gemini)
 - **Routers**: `routers/` has modular route handlers (sleeper, startsit, trades, projections, ai, gifs, leagues)
+
+### Database (Supabase)
+
+Three main tables:
+
+**users**:
+- `id` (uuid, FK to auth.users.id) — Supabase auth user ID
+- `sleeper_username` (text) — User's Sleeper username
+- `sleeper_user_id` (text) — Sleeper user ID (used for API calls)
+
+**leagues**:
+- `id` (uuid, PK) — League record ID
+- `user_id` (uuid, FK to users.id) — Owner of this league record
+- `league_id` (text) — Sleeper league ID
+- `league_name` (text) — League display name
+- `season` (int4) — Year (e.g., 2025)
+- `sleeper_roster_id` (int4) — User's roster ID in this league
+- `is_active` (bool) — Whether this is the user's currently selected league
+- Roster position counts: `num_qbs`, `num_wrs`, `num_rbs`, `num_tes`, `num_flex`, `num_bench`
+- League settings: `num_teams`, `scoring_format`
+
+**saved_recommendations**:
+- `id` (uuid, PK)
+- `user_id` (uuid, FK to users.id)
+- `league_id` (text)
+- `week` (int4), `season` (int4), `type` (text)
+- `players_considered` (jsonb), `recommendation` (jsonb)
+
+Users can have multiple leagues but only one is active at a time (`is_active = true`)
 
 ### ID Mapping System
 
@@ -70,11 +110,39 @@ All player lookups use Sleeper IDs as the primary key. Mapping files in `data/` 
 
 ```
 Mobile (fetch) → Backend (FastAPI) → External APIs (Sleeper, FantasyPros, Tank01, Anthropic)
+                ↓
+         Supabase (Auth + Database)
 ```
 
 - GET requests use URL params (e.g., `/roster/{league_id}/{user_id}`)
 - POST requests use JSON body (e.g., `/ai/evaluate_trade/claude`)
 - Multiple player IDs are passed as colon-separated strings (e.g., `"4042:4046:8183"`)
+- Onboarding API calls go directly to Sleeper API (no backend proxy)
+- User data queries go directly to Supabase from mobile app
+
+### Authentication & Onboarding Flow
+
+**New User Journey:**
+1. Sign up → Supabase creates auth user
+2. Redirect to `/(onboarding)/username` (index.tsx checks users table, finds no entry)
+3. User enters Sleeper username → validate via Sleeper API → get `sleeper_user_id`
+4. Navigate to `/(onboarding)/pick-league` with params
+5. Fetch user's leagues from Sleeper API → display list
+6. User picks league → fetch roster to get `sleeper_roster_id`
+7. Insert into `users` table: `{ id: auth.user.id, sleeper_username, sleeper_user_id }`
+8. Insert into `leagues` table: `{ user_id, league_id, league_name, season, sleeper_roster_id, is_active: true, ... }`
+9. Navigate to `/(tabs)/roster`
+
+**Returning User Journey:**
+1. Login → Supabase validates credentials
+2. Redirect to `/` (index.tsx)
+3. Query `users` table → user exists
+4. Redirect to `/(tabs)/roster`
+
+**Route Protection:**
+- `app/(auth)/_layout.tsx` → redirects authenticated users to `/`
+- `app/(tabs)/_layout.tsx` → redirects unauthenticated users to login
+- `app/index.tsx` → checks onboarding status and routes accordingly
 
 ### AI Integration
 
@@ -86,14 +154,14 @@ Mobile (fetch) → Backend (FastAPI) → External APIs (Sleeper, FantasyPros, Ta
 ## Environment Variables
 
 ### Mobile (`.env`)
-- `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY` — Supabase connection
+- `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY` — Supabase connection (auth + database)
 - `EXPO_PUBLIC_API_URL` — Backend URL (e.g., `http://192.168.1.113:8000`)
 
 ### Backend (`.env`)
-- `SUPABASE_URL` / `SUPABASE_SERVICE_KEY`
-- `ANTHROPIC_API_KEY`
-- `GEMINI_API_KEY`
-- `RAPID_API_KEY` / `FANTASY_PROS_API_KEY`
+- `SUPABASE_URL` / `SUPABASE_SERVICE_KEY` — Supabase connection for server-side operations
+- `ANTHROPIC_API_KEY` — Claude API for AI recommendations
+- `GEMINI_API_KEY` — Google Gemini API (alternative AI provider)
+- `RAPID_API_KEY` / `FANTASY_PROS_API_KEY` — FantasyPros for player data
 
 ## Guidelines
 
