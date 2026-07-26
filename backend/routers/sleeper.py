@@ -66,7 +66,9 @@ def fetch_opp_matchup(league_id: str, week: int, roster_id: int, matchup_id: int
 def fetch_my_team(league_id: str, user_id: str):
     users = get_users_in_league(league_id)
     user = next((u for u in users if u["user_id"] == user_id), None)
-    return {"team_name": user["metadata"]["team_name"]}
+    # Use team_name from metadata if it exists, otherwise fallback to display_name or username
+    team_name = user.get("metadata", {}).get("team_name") or user.get("display_name") or user.get("username", "Unknown Team")
+    return {"team_name": team_name}
 
 @router.get("/team/{league_id}/roster/{roster_id}")
 def fetch_team_by_roster(league_id: str, roster_id: int):
@@ -76,7 +78,9 @@ def fetch_team_by_roster(league_id: str, roster_id: int):
 
     users = get_users_in_league(league_id)
     user = next(u for u in users if u["user_id"] == owner_id)
-    return {"team_name": user["metadata"]["team_name"]}
+    # Use team_name from metadata if it exists, otherwise fallback to display_name or username
+    team_name = user.get("metadata", {}).get("team_name") or user.get("display_name") or user.get("username", "Unknown Team")
+    return {"team_name": team_name}
 
 # roster info
 @router.get("/roster/{league_id}/{user_id}")

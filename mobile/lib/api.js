@@ -1,14 +1,12 @@
+import { supabase } from './supabase';
+
 // The base URL comes from our .env file. In Expo, any env variable
 // that starts with EXPO_PUBLIC_ is available in your code via
 // process.env. This lets us change the URL without editing code.
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
-// Hardcoded for now
-const USERNAME = "sophiali";
-const USER_ID = "1130559048241356800"
-const LEAGUE_ID = "1267619828559007744";
+// Constants (these stay the same for all users)
 const WEEK = 17
-const ROSTER_ID = 5
 const SEASON = 2025
 
 // Toggle this to enable/disable projection API calls.
@@ -28,12 +26,124 @@ const PROJECTIONS_ENABLED = true;
 // you the actual value. Without await, you'd get a Promise object
 // instead of the data you want.
 
+// ========== Onboarding API Calls ==========
+// These call the Sleeper API directly (public API, no auth needed)
+
+export async function validateSleeperUsername(username) {
+  try {
+    const url = `https://api.sleeper.app/v1/user/${username}`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error('Username not found');
+    }
+
+    const data = await response.json();
+    return data.user_id; // Returns Sleeper user ID
+  } catch (error) {
+    console.error('Error validating username:', error);
+    throw error;
+  }
+}
+
+export async function getUserLeagues(sleeperUserId) {
+  try {
+    const url = `https://api.sleeper.app/v1/user/${sleeperUserId}/leagues/nfl/2025`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch leagues');
+    }
+
+    const data = await response.json();
+    return data; // Returns array of league objects
+  } catch (error) {
+    console.error('Error fetching leagues:', error);
+    throw error;
+  }
+}
+
+export async function getUserRoster(leagueId, sleeperUserId) {
+  try {
+    // Fetch all rosters in the league
+    const url = `https://api.sleeper.app/v1/league/${leagueId}/rosters`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch rosters');
+    }
+
+    const rosters = await response.json();
+
+    // Find the user's roster
+    const userRoster = rosters.find(roster => roster.owner_id === sleeperUserId);
+
+    if (!userRoster) {
+      throw new Error('User roster not found in league');
+    }
+
+    return userRoster; // Returns roster object with roster_id
+  } catch (error) {
+    console.error('Error fetching roster:', error);
+    throw error;
+  }
+}
+
+// ========== User Data Helper ==========
+// This fetches the current user's Sleeper data from the database.
+// It's called "lazy loading" because we fetch it only when needed,
+// not on app startup.
+
+async function getActiveUserData() {
+  // 1. Get the currently authenticated user
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    throw new Error('User not authenticated');
+  }
+
+  // 2. Fetch user's Sleeper data from database
+  const { data: userData, error: userError } = await supabase
+    .from('users')
+    .select('sleeper_user_id')
+    .eq('id', user.id)
+    .single();
+
+  if (userError || !userData) {
+    throw new Error('User data not found in database');
+  }
+
+  // 3. Fetch active league
+  const { data: leagueData, error: leagueError } = await supabase
+    .from('leagues')
+    .select('league_id, sleeper_roster_id')
+    .eq('user_id', user.id)
+    .eq('is_active', true)
+    .single();
+
+  if (leagueError || !leagueData) {
+    throw new Error('No active league found');
+  }
+
+  // 4. Return the IDs that used to be hardcoded
+  return {
+    userId: userData.sleeper_user_id,
+    leagueId: leagueData.league_id,
+    rosterId: leagueData.sleeper_roster_id,
+  };
+}
+
+// ========== Existing API Calls ==========
+
 export async function fetchMatchup() {
+  // Get user's dynamic data from database
+  const { userId, leagueId, rosterId } = await getActiveUserData();
+
   // 1. get my matchup + my team name at the same time.
   // Promise.all runs them in parallel (faster than one-by-one).
   const [myResponse, myTeamResponse] = await Promise.all([
-    fetch(`${API_URL}/matchup/${LEAGUE_ID}/${WEEK}/${ROSTER_ID}`),
-    fetch(`${API_URL}/team/${LEAGUE_ID}/${USER_ID}`),
+    fetch(`${API_URL}/matchup/${leagueId}/${WEEK}/${rosterId}`),
+    fetch(`${API_URL}/team/${leagueId}/${userId}`),
   ]);
   if (!myResponse.ok) throw new Error(`Failed to fetch my matchup: ${myResponse.status}`);
   if (!myTeamResponse.ok) throw new Error(`Failed to fetch my team: ${myTeamResponse.status}`);
@@ -42,7 +152,7 @@ export async function fetchMatchup() {
   const myTeam = await myTeamResponse.json();
 
   // 2. get opponent's matchup (needs matchup_id from step 1)
-  const oppResponse = await fetch(`${API_URL}/matchup/${LEAGUE_ID}/${WEEK}/${ROSTER_ID}/${myMatchup.matchup_id}`);
+  const oppResponse = await fetch(`${API_URL}/matchup/${leagueId}/${WEEK}/${rosterId}/${myMatchup.matchup_id}`);
   if (!oppResponse.ok) throw new Error(`Failed to fetch opponent matchup: ${oppResponse.status}`);
   const oppMatchup = await oppResponse.json();
 
@@ -52,9 +162,9 @@ export async function fetchMatchup() {
 
   if (PROJECTIONS_ENABLED) {
     const [oppTeamResponse, myProjResponse, oppProjResponse] = await Promise.all([
-      fetch(`${API_URL}/team/${LEAGUE_ID}/roster/${oppMatchup.roster_id}`),
-      fetch(`${API_URL}/projection/roster/${LEAGUE_ID}/${ROSTER_ID}/${WEEK}`),
-      fetch(`${API_URL}/projection/roster/${LEAGUE_ID}/${oppMatchup.roster_id}/${WEEK}`),
+      fetch(`${API_URL}/team/${leagueId}/roster/${oppMatchup.roster_id}`),
+      fetch(`${API_URL}/projection/roster/${leagueId}/${rosterId}/${WEEK}`),
+      fetch(`${API_URL}/projection/roster/${leagueId}/${oppMatchup.roster_id}/${WEEK}`),
     ]);
     if (!oppTeamResponse.ok) throw new Error(`Failed to fetch opponent team: ${oppTeamResponse.status}`);
     const oppTeam = await oppTeamResponse.json();
@@ -71,7 +181,7 @@ export async function fetchMatchup() {
   }
 
   // Projections disabled — still need opponent team name
-  const oppTeamResponse = await fetch(`${API_URL}/team/${LEAGUE_ID}/roster/${oppMatchup.roster_id}`);
+  const oppTeamResponse = await fetch(`${API_URL}/team/${leagueId}/roster/${oppMatchup.roster_id}`);
   if (!oppTeamResponse.ok) throw new Error(`Failed to fetch opponent team: ${oppTeamResponse.status}`);
   const oppTeam = await oppTeamResponse.json();
 
@@ -84,12 +194,15 @@ export async function fetchMatchup() {
 }
 
 export async function fetchRoster() {
+  // Get user's dynamic data from database
+  const { userId, leagueId, rosterId } = await getActiveUserData();
+
   // 1. Get roster (player IDs) and matchup (points) in parallel.
   // The roster tells us WHO is on the team. The matchup tells us
   // how many points each player scored this week.
   const [rosterResponse, matchupResponse] = await Promise.all([
-    fetch(`${API_URL}/roster/${LEAGUE_ID}/${USER_ID}`),
-    fetch(`${API_URL}/matchup/${LEAGUE_ID}/${WEEK}/${ROSTER_ID}`),
+    fetch(`${API_URL}/roster/${leagueId}/${userId}`),
+    fetch(`${API_URL}/matchup/${leagueId}/${WEEK}/${rosterId}`),
   ]);
   if (!rosterResponse.ok) throw new Error(`Failed to fetch roster: ${rosterResponse.status}`);
   if (!matchupResponse.ok) throw new Error(`Failed to fetch matchup: ${matchupResponse.status}`);
@@ -175,6 +288,9 @@ export async function fetchRoster() {
 // comparison endpoint. Unlike GET requests where data goes in the URL,
 // POST requests send data in the request body as JSON.
 export async function comparePlayersClaude(playerIds) {
+  // Get user's dynamic data from database
+  const { leagueId } = await getActiveUserData();
+
   // Join the array of IDs into a colon-separated string.
   // e.g. ["4042", "4046", "8183"] → "4042:4046:8183"
   const players = playerIds.join(":");
@@ -184,7 +300,7 @@ export async function comparePlayersClaude(playerIds) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       players,
-      league_id: LEAGUE_ID,
+      league_id: leagueId,
       week: WEEK,
       season: SEASON,
     }),
@@ -225,14 +341,17 @@ export async function fetchDisplayStats(playerId, week = WEEK) {
 // Send trade player IDs to Claude for evaluation. Returns a verdict
 // (accept/decline/counter) and a summary explanation.
 export async function evaluateTrade(givePlayerIds, getPlayerIds) {
+  // Get user's dynamic data from database
+  const { userId, leagueId } = await getActiveUserData();
+
   const response = await fetch(`${API_URL}/ai/evaluate_trade/claude`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       give: givePlayerIds.join(":"),
       get: getPlayerIds.join(":"),
-      league_id: LEAGUE_ID,
-      user_id: USER_ID,
+      league_id: leagueId,
+      user_id: userId,
       season: SEASON,
       current_week: WEEK,
     }),
@@ -244,13 +363,16 @@ export async function evaluateTrade(givePlayerIds, getPlayerIds) {
 // Send waiver player ID to Claude for evaluation. Returns a verdict
 // (add/don't add), summary, and suggested drop players.
 export async function evaluateWaiver(playerId) {
+  // Get user's dynamic data from database
+  const { userId, leagueId } = await getActiveUserData();
+
   const response = await fetch(`${API_URL}/ai/evaluate_waiver/claude`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       player: playerId,
-      league_id: LEAGUE_ID,
-      user_id: USER_ID,
+      league_id: leagueId,
+      user_id: userId,
       season: SEASON,
       current_week: WEEK,
     }),

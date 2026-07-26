@@ -24,8 +24,9 @@ export default function AuthLayout() {
     const inAuth = segments[0] === '(auth)';
 
     if (user && inAuth) {
-      // User is logged in but on auth screen - redirect to roster
-      router.replace('/(tabs)/roster');
+      // User is logged in but on auth screen - redirect to index
+      // Index will check for onboarding and route appropriately
+      router.replace('/');
     }
   }, [user, loading, segments]);
 
