@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import Header from '@/components/Header';
 import ProfileDropdown from '@/components/ProfileDropdown';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 
 const MENU_ITEMS = [
   {
@@ -34,13 +36,33 @@ const MENU_ITEMS = [
 
 export default function AiScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [userInitial, setUserInitial] = useState<string>('');
+
+  // Fetch username for avatar initial when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (user) {
+        supabase
+          .from('users')
+          .select('sleeper_username')
+          .eq('id', user.id)
+          .single()
+          .then(({ data }) => {
+            if (data?.sleeper_username) {
+              setUserInitial(data.sleeper_username.charAt(0).toUpperCase());
+            }
+          });
+      }
+    }, [user])
+  );
 
   return (
     <View style={styles.container}>
       <Header
         week={0}
-        initials="SL"
+        initials={userInitial}
         onAvatarPress={() => setShowProfileDropdown(true)}
       />
 

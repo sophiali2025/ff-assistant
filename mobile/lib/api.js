@@ -151,6 +151,15 @@ export async function fetchMatchup() {
   const myMatchup = await myResponse.json();
   const myTeam = await myTeamResponse.json();
 
+  // Check if there's a matchup this week (could be null for playoffs/bye weeks)
+  if (!myMatchup.matchup_id) {
+    return {
+      week: WEEK,
+      my_team: { name: myTeam.team_name, points: myMatchup.points ?? 0, projected_points: 0 },
+      opponent: { name: 'No Matchup', points: 0, projected_points: 0 },
+    };
+  }
+
   // 2. get opponent's matchup (needs matchup_id from step 1)
   const oppResponse = await fetch(`${API_URL}/matchup/${leagueId}/${WEEK}/${rosterId}/${myMatchup.matchup_id}`);
   if (!oppResponse.ok) throw new Error(`Failed to fetch opponent matchup: ${oppResponse.status}`);

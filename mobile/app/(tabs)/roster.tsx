@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { StyleSheet, ActivityIndicator } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 
 import { View } from '@/components/default/Themed';
 import Header from '@/components/Header';
@@ -7,6 +8,8 @@ import WeeklyMatch from '@/components/WeeklyMatch';
 import RosterList from '@/components/RosterList';
 import ProfileDropdown from '@/components/ProfileDropdown';
 import { fetchMatchup, fetchRoster } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 
 // --- useState and useEffect ---
 //
@@ -22,33 +25,52 @@ import { fetchMatchup, fetchRoster } from '@/lib/api';
 //   no array = run after every render (rarely what you want)
 
 export default function RosterScreen() {
+  const { user } = useAuth();
+
   // matchup starts as null because we don't have data yet.
   // Once the fetch completes, we call setMatchup with the data,
   // which triggers a re-render with the real values.
   const [matchup, setMatchup] = useState<any>(null);
   const [roster, setRoster] = useState<any>(null);
+  const [userInitial, setUserInitial] = useState<string>('');
 
   // State to control the profile dropdown visibility
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
 
-  // useEffect with [] runs once when the screen loads.
-  // Both fetches fire at the same time (in parallel) — we don't
-  // await one before starting the other, so the screen loads faster.
-  useEffect(() => {
-    fetchMatchup()
-      .then((data) => setMatchup(data))
-      .catch((err) => console.error('Error fetching matchup:', err));
+  // useFocusEffect runs every time the screen comes into focus.
+  // This ensures data refreshes when returning from other screens,
+  // like when switching leagues. Both fetches fire in parallel for speed.
+  useFocusEffect(
+    useCallback(() => {
+      // Fetch username for avatar initial
+      if (user) {
+        supabase
+          .from('users')
+          .select('sleeper_username')
+          .eq('id', user.id)
+          .single()
+          .then(({ data }) => {
+            if (data?.sleeper_username) {
+              setUserInitial(data.sleeper_username.charAt(0).toUpperCase());
+            }
+          });
+      }
 
-    fetchRoster()
-      .then((data) => setRoster(data))
-      .catch((err) => console.error('Error fetching roster:', err));
-  }, []);
+      fetchMatchup()
+        .then((data) => setMatchup(data))
+        .catch((err) => console.error('Error fetching matchup:', err));
+
+      fetchRoster()
+        .then((data) => setRoster(data))
+        .catch((err) => console.error('Error fetching roster:', err));
+    }, [user])
+  );
 
   return (
     <View style={styles.container}>
       <Header
         week={matchup?.week ?? 0}
-        initials="SL"
+        initials={userInitial}
         onAvatarPress={() => setShowProfileDropdown(true)}
       />
 

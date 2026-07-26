@@ -7,6 +7,7 @@ import {
   TouchableWithoutFeedback,
   StyleSheet,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 
 type ProfileDropdownProps = {
@@ -30,6 +31,7 @@ export default function ProfileDropdown({
   // 3. Easier to test and maintain
 
   const { signOut } = useAuth();
+  const router = useRouter();
 
   const handleLogout = async () => {
     try {
@@ -43,8 +45,8 @@ export default function ProfileDropdown({
   };
 
   const handleSwitchLeague = () => {
-    console.log('Switch league tapped (not yet implemented)');
     onClose();
+    router.push('/(onboarding)/pick-league');
   };
 
   return (
