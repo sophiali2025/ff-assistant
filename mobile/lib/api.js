@@ -206,6 +206,23 @@ export async function fetchRoster() {
   // Get user's dynamic data from database
   const { userId, leagueId, rosterId } = await getActiveUserData();
 
+  // Get league roster settings from database
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    throw new Error('User not authenticated');
+  }
+
+  const { data: leagueSettings, error: leagueError } = await supabase
+    .from('leagues')
+    .select('num_qbs, num_rbs, num_wrs, num_tes, num_flex')
+    .eq('user_id', user.id)
+    .eq('is_active', true)
+    .single();
+
+  if (leagueError || !leagueSettings) {
+    throw new Error('League settings not found');
+  }
+
   // 1. Get roster (player IDs) and matchup (points) in parallel.
   // The roster tells us WHO is on the team. The matchup tells us
   // how many points each player scored this week.
@@ -249,15 +266,20 @@ export async function fetchRoster() {
   }
 
   // 4. Build the starters list (in order) with correct slots.
-  // roster.starters is ordered: positions 1-6 use the player's
-  // position, 7th and 8th are FLEX, then K and DEF follow.
+  // Use league settings to determine which positions are flex
+  const { num_qbs, num_rbs, num_wrs, num_tes, num_flex } = leagueSettings;
+  const flexStartIndex = num_qbs + num_rbs + num_wrs + num_tes;
+  const flexEndIndex = flexStartIndex + num_flex;
+
   const starters = roster.starters.map((id, index) => {
     const detail = detailsById[id];
     let slot;
-    if (index === 6 || index === 7) {
+
+    // Check if this index is in the FLEX range
+    if (index >= flexStartIndex && index < flexEndIndex) {
       slot = "FLX";
     } else {
-      // Use the player's fantasy position (QB, RB, WR, etc.)
+      // Use the player's actual position for non-flex slots
       slot = detail.position ?? "??";
     }
 
