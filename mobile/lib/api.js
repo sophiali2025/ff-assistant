@@ -31,8 +31,7 @@ const PROJECTIONS_ENABLED = true;
 
 export async function validateSleeperUsername(username) {
   try {
-    const url = `https://api.sleeper.app/v1/user/${username}`;
-    const response = await fetch(url);
+    const response = await fetch(`${API_URL}/user/${username}/id`);
 
     if (!response.ok) {
       throw new Error('Username not found');
@@ -48,8 +47,7 @@ export async function validateSleeperUsername(username) {
 
 export async function getUserLeagues(sleeperUserId) {
   try {
-    const url = `https://api.sleeper.app/v1/user/${sleeperUserId}/leagues/nfl/2025`;
-    const response = await fetch(url);
+    const response = await fetch(`${API_URL}/user/${sleeperUserId}/leagues/2025`);
 
     if (!response.ok) {
       throw new Error('Failed to fetch leagues');
@@ -65,24 +63,14 @@ export async function getUserLeagues(sleeperUserId) {
 
 export async function getUserRoster(leagueId, sleeperUserId) {
   try {
-    // Fetch all rosters in the league
-    const url = `https://api.sleeper.app/v1/league/${leagueId}/rosters`;
-    const response = await fetch(url);
+    const response = await fetch(`${API_URL}/roster/${leagueId}/${sleeperUserId}`);
 
     if (!response.ok) {
-      throw new Error('Failed to fetch rosters');
+      throw new Error('Failed to fetch roster');
     }
 
-    const rosters = await response.json();
-
-    // Find the user's roster
-    const userRoster = rosters.find(roster => roster.owner_id === sleeperUserId);
-
-    if (!userRoster) {
-      throw new Error('User roster not found in league');
-    }
-
-    return userRoster; // Returns roster object with roster_id
+    const roster = await response.json();
+    return roster; // Returns roster object with roster_id
   } catch (error) {
     console.error('Error fetching roster:', error);
     throw error;
