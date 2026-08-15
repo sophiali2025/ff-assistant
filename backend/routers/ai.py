@@ -1,8 +1,9 @@
 import json
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Header
 from services.claude import ask_claude
 from services.gemini import ask_gemini
+from services.supabase import get_auth_token, verify_token_and_get_user_id, verify_league_ownership
 from routers.startsit import fetch_batch_player_info_basic
 from routers.sleeper import fetch_league_type
 from routers.trades import get_trade_players, get_roster_info
@@ -47,7 +48,14 @@ def parse_compare_response(raw: str) -> list[ComparePlayer]:
     return [ComparePlayer(**p) for p in data]
 
 @router.post("/ai/compare/claude", response_model=CompareResponse)
-async def compare_players_claude(request: CompareRequest):
+async def compare_players_claude(
+    request: CompareRequest,
+    authorization: str = Header(None),
+):
+    # Validate auth token (no ownership check - less sensitive)
+    token = get_auth_token(authorization)
+    user_id = await verify_token_and_get_user_id(token)
+
     player_info = fetch_batch_player_info_basic(request.week, request.players)
     league_type = fetch_league_type(request.league_id)["league type"]
 
@@ -116,7 +124,17 @@ def parse_trade_response(raw: str) -> dict:
     return json.loads(text)
 
 @router.post("/ai/evaluate_trade/claude", response_model=TradeResponse)
-async def evaluate_trade_claude(request: TradeRequest):
+async def evaluate_trade_claude(
+    request: TradeRequest,
+    authorization: str = Header(None),
+):
+    # Validate auth token
+    token = get_auth_token(authorization)
+    user_id = await verify_token_and_get_user_id(token)
+
+    # Verify user owns this league (prevents analyzing other users' data)
+    league_record = await verify_league_ownership(user_id, request.league_id)
+
     trade_players = get_trade_players(request.give, request.get, request.current_week)
     league_type = fetch_league_type(request.league_id)["league type"]
 
@@ -179,7 +197,17 @@ def parse_waiver_response(raw: str) -> dict:
     return json.loads(text)
 
 @router.post("/ai/evaluate_waiver/claude", response_model=WaiverResponse)
-async def evaluate_waiver_claude(request: WaiverRequest):
+async def evaluate_waiver_claude(
+    request: WaiverRequest,
+    authorization: str = Header(None),
+):
+    # Validate auth token
+    token = get_auth_token(authorization)
+    user_id = await verify_token_and_get_user_id(token)
+
+    # Verify user owns this league (prevents analyzing other users' data)
+    league_record = await verify_league_ownership(user_id, request.league_id)
+
     waiver_player = fetch_waiver_player(request.player, request.current_week)
     league_type = fetch_league_type(request.league_id)["league type"]
 

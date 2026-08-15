@@ -364,6 +364,9 @@ export async function fetchRoster() {
 // comparison endpoint. Unlike GET requests where data goes in the URL,
 // POST requests send data in the request body as JSON.
 export async function comparePlayersClaude(playerIds) {
+  // Get auth token for authenticated request
+  const token = await getAuthToken();
+
   // Get user's dynamic data from database
   const { leagueId } = await getActiveUserData();
 
@@ -373,7 +376,10 @@ export async function comparePlayersClaude(playerIds) {
 
   const response = await fetch(`${API_URL}/ai/compare/claude`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+    },
     body: JSON.stringify({
       players,
       league_id: leagueId,
@@ -417,12 +423,18 @@ export async function fetchDisplayStats(playerId, week = WEEK) {
 // Send trade player IDs to Claude for evaluation. Returns a verdict
 // (accept/decline/counter) and a summary explanation.
 export async function evaluateTrade(givePlayerIds, getPlayerIds) {
+  // Get auth token for authenticated request
+  const token = await getAuthToken();
+
   // Get user's dynamic data from database
   const { userId, leagueId } = await getActiveUserData();
 
   const response = await fetch(`${API_URL}/ai/evaluate_trade/claude`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+    },
     body: JSON.stringify({
       give: givePlayerIds.join(":"),
       get: getPlayerIds.join(":"),
@@ -439,12 +451,18 @@ export async function evaluateTrade(givePlayerIds, getPlayerIds) {
 // Send waiver player ID to Claude for evaluation. Returns a verdict
 // (add/don't add), summary, and suggested drop players.
 export async function evaluateWaiver(playerId) {
+  // Get auth token for authenticated request
+  const token = await getAuthToken();
+
   // Get user's dynamic data from database
   const { userId, leagueId } = await getActiveUserData();
 
   const response = await fetch(`${API_URL}/ai/evaluate_waiver/claude`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+    },
     body: JSON.stringify({
       player: playerId,
       league_id: leagueId,
