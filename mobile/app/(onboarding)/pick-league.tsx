@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Scr
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { getUserLeagues, getUserRoster } from '@/lib/api';
+import { getUserLeagues, getUserRoster, completeOnboarding, switchLeague } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 
 interface League {
@@ -120,100 +120,41 @@ export default function PickLeagueScreen() {
       const isOnboarding = !!username && !!sleeperUserId;
 
       if (isOnboarding) {
-        // Onboarding flow - insert new user and league
-        // 2. Insert into users table
-        const { error: userError } = await supabase
-          .from('users')
-          .insert({
-            id: user.id,
-            sleeper_username: userSleeperData.username,
-            sleeper_user_id: userSleeperData.sleeperUserId,
-          });
-
-        if (userError) {
-          console.error('Error inserting user:', userError);
-          throw new Error('Failed to save user data');
-        }
-
-        // 3. Insert into leagues table
-        const { error: leagueError } = await supabase
-          .from('leagues')
-          .insert({
-            user_id: user.id,
-            league_id: selectedLeagueId,
-            league_name: selectedLeague.name,
-            season: 2025,
-            num_teams: selectedLeague.total_rosters,
-            scoring_format: selectedLeague.scoring_settings?.rec?.toString() || 'ppr',
-            num_qbs: rosterSlots.filter(slot => slot === 'QB').length,
-            num_wrs: rosterSlots.filter(slot => slot === 'WR').length,
-            num_rbs: rosterSlots.filter(slot => slot === 'RB').length,
-            num_tes: rosterSlots.filter(slot => slot === 'TE').length,
-            num_flex: rosterSlots.filter(slot => slot === 'FLEX').length,
-            num_bench: rosterSlots.filter(slot => slot === 'BN').length,
-            sleeper_roster_id: rosterId,
-            is_active: true,
-          });
-
-        if (leagueError) {
-          console.error('Error inserting league:', leagueError);
-          throw new Error('Failed to save league data');
-        }
+        // Onboarding flow - call backend API instead of direct Supabase
+        await completeOnboarding({
+          sleeper_username: userSleeperData.username,
+          sleeper_user_id: userSleeperData.sleeperUserId,
+          league_id: selectedLeagueId,
+          league_name: selectedLeague.name,
+          season: 2025,
+          num_teams: selectedLeague.total_rosters,
+          scoring_format: selectedLeague.scoring_settings?.rec?.toString() || 'ppr',
+          num_qbs: rosterSlots.filter(slot => slot === 'QB').length,
+          num_wrs: rosterSlots.filter(slot => slot === 'WR').length,
+          num_rbs: rosterSlots.filter(slot => slot === 'RB').length,
+          num_tes: rosterSlots.filter(slot => slot === 'TE').length,
+          num_flex: rosterSlots.filter(slot => slot === 'FLEX').length,
+          num_bench: rosterSlots.filter(slot => slot === 'BN').length,
+          sleeper_roster_id: rosterId,
+        });
 
         router.replace('/(tabs)/roster');
       } else {
-        // Switch league flow - update existing leagues
-        // First, check if this league already exists in database
-        const { data: existingLeague } = await supabase
-          .from('leagues')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('league_id', selectedLeagueId)
-          .single();
-
-        if (existingLeague) {
-          // League exists - just activate it and deactivate others
-          await supabase
-            .from('leagues')
-            .update({ is_active: false })
-            .eq('user_id', user.id);
-
-          await supabase
-            .from('leagues')
-            .update({ is_active: true })
-            .eq('user_id', user.id)
-            .eq('league_id', selectedLeagueId);
-        } else {
-          // League doesn't exist - insert it and deactivate others
-          await supabase
-            .from('leagues')
-            .update({ is_active: false })
-            .eq('user_id', user.id);
-
-          const { error: leagueError } = await supabase
-            .from('leagues')
-            .insert({
-              user_id: user.id,
-              league_id: selectedLeagueId,
-              league_name: selectedLeague.name,
-              season: 2025,
-              num_teams: selectedLeague.total_rosters,
-              scoring_format: selectedLeague.scoring_settings?.rec?.toString() || 'ppr',
-              num_qbs: rosterSlots.filter(slot => slot === 'QB').length,
-              num_wrs: rosterSlots.filter(slot => slot === 'WR').length,
-              num_rbs: rosterSlots.filter(slot => slot === 'RB').length,
-              num_tes: rosterSlots.filter(slot => slot === 'TE').length,
-              num_flex: rosterSlots.filter(slot => slot === 'FLEX').length,
-              num_bench: rosterSlots.filter(slot => slot === 'BN').length,
-              sleeper_roster_id: rosterId,
-              is_active: true,
-            });
-
-          if (leagueError) {
-            console.error('Error inserting league:', leagueError);
-            throw new Error('Failed to save league data');
-          }
-        }
+        // Switch league flow - call backend API instead of direct Supabase
+        await switchLeague({
+          league_id: selectedLeagueId,
+          league_name: selectedLeague.name,
+          season: 2025,
+          num_teams: selectedLeague.total_rosters,
+          scoring_format: selectedLeague.scoring_settings?.rec?.toString() || 'ppr',
+          num_qbs: rosterSlots.filter(slot => slot === 'QB').length,
+          num_wrs: rosterSlots.filter(slot => slot === 'WR').length,
+          num_rbs: rosterSlots.filter(slot => slot === 'RB').length,
+          num_tes: rosterSlots.filter(slot => slot === 'TE').length,
+          num_flex: rosterSlots.filter(slot => slot === 'FLEX').length,
+          num_bench: rosterSlots.filter(slot => slot === 'BN').length,
+          sleeper_roster_id: rosterId,
+        });
 
         router.back();
       }

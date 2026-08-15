@@ -77,6 +77,63 @@ export async function getUserRoster(leagueId, sleeperUserId) {
   }
 }
 
+// Helper to get auth token from Supabase session
+async function getAuthToken() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    throw new Error('No active session');
+  }
+  return session.access_token;
+}
+
+export async function completeOnboarding(onboardingData) {
+  try {
+    const token = await getAuthToken();
+
+    const response = await fetch(`${API_URL}/onboarding/complete`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(onboardingData),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to complete onboarding');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error completing onboarding:', error);
+    throw error;
+  }
+}
+
+export async function switchLeague(leagueData) {
+  try {
+    const token = await getAuthToken();
+
+    const response = await fetch(`${API_URL}/onboarding/switch-league`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(leagueData),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to switch league');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error switching league:', error);
+    throw error;
+  }
+}
+
 // ========== User Data Helper ==========
 // This fetches the current user's Sleeper data from the database.
 // It's called "lazy loading" because we fetch it only when needed,

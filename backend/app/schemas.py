@@ -134,3 +134,42 @@ class DisplayStats(BaseModel):
     overall_ranking: float | None
     ros_ranking: int | None
 
+# Onboarding
+class CompleteOnboardingRequest(BaseModel):
+    sleeper_username: str
+    sleeper_user_id: str
+    league_id: str
+    league_name: str
+    season: int
+    num_teams: int
+    scoring_format: str
+    num_qbs: int
+    num_wrs: int
+    num_rbs: int
+    num_tes: int
+    num_flex: int
+    num_bench: int
+    sleeper_roster_id: int
+
+class CompleteOnboardingResponse(BaseModel):
+    success: bool
+    message: str
+
+class SwitchLeagueRequest(BaseModel):
+    league_id: str
+    league_name: str
+    season: int
+    num_teams: int
+    scoring_format: str
+    num_qbs: int
+    num_wrs: int
+    num_rbs: int
+    num_tes: int
+    num_flex: int
+    num_bench: int
+    sleeper_roster_id: int
+
+class SwitchLeagueResponse(BaseModel):
+    success: bool
+    message: str
+
