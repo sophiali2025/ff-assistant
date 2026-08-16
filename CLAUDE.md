@@ -55,10 +55,11 @@ Auth & Onboarding:
 
 API layer (`lib/api.js`):
 - All backend calls go through this file using `fetch()` with `EXPO_PUBLIC_API_URL`
+- **Authentication**: `getAuthToken()` helper retrieves JWT token from Supabase session
+- **Authenticated endpoints**: Onboarding and AI endpoints send `Authorization: Bearer {token}` headers
 - **Dynamic user data**: `getActiveUserData()` queries Supabase database for user's Sleeper IDs
 - Fetches `sleeper_user_id` from `users` table and active league's `league_id`/`sleeper_roster_id` from `leagues` table
 - Uses `Promise.all()` for parallel requests where possible
-- Onboarding API calls use Sleeper public API directly (no backend proxy)
 
 ### Backend
 
@@ -67,8 +68,9 @@ API layer (`lib/api.js`):
 - **Router registration**: `app/routes.py` imports and mounts all routers with prefixes
 - **Schemas**: `app/schemas.py` — all Pydantic models (Player, TradeRequest, CompareRequest, etc.)
 - **Static data**: `app/data.py` loads player databases and ID mappings from `data/` files at startup (no database)
-- **Services**: `services/` contains external API integrations (sleeper, fantasypros, claude, tank01, gemini)
-- **Routers**: `routers/` has modular route handlers (sleeper, startsit, trades, projections, ai, gifs, leagues)
+- **Services**: `services/` contains external API integrations (sleeper, fantasypros, claude, tank01, gemini, supabase)
+  - `services/supabase.py` — Supabase client and auth helpers (get_auth_token, verify_token_and_get_user_id, verify_league_ownership)
+- **Routers**: `routers/` has modular route handlers (sleeper, startsit, trades, projections, ai, gifs, leagues, onboarding)
 
 ### Database (Supabase)
 
@@ -109,35 +111,48 @@ All player lookups use Sleeper IDs as the primary key. Mapping files in `data/` 
 ### Communication Flow
 
 ```
-Mobile (fetch) → Backend (FastAPI) → External APIs (Sleeper, FantasyPros, Tank01, Anthropic)
-                ↓
-         Supabase (Auth + Database)
+Mobile (fetch + JWT token) → Backend (FastAPI + auth validation) → External APIs (Sleeper, FantasyPros, Tank01, Anthropic)
+                             ↓                                      ↓
+                      Supabase (verify token)              Supabase (database queries)
 ```
 
 - GET requests use URL params (e.g., `/roster/{league_id}/{user_id}`)
 - POST requests use JSON body (e.g., `/ai/evaluate_trade/claude`)
+- **Authenticated requests** include `Authorization: Bearer {token}` header
 - Multiple player IDs are passed as colon-separated strings (e.g., `"4042:4046:8183"`)
-- Onboarding API calls go directly to Sleeper API (no backend proxy)
-- User data queries go directly to Supabase from mobile app
+- User data queries go directly to Supabase from mobile app (read operations)
+- Database writes (onboarding, league switching) go through backend endpoints
 
 ### Authentication & Onboarding Flow
+
+**Authentication Pattern:**
+- Mobile app stores JWT token in Supabase session (managed by Supabase client)
+- `getAuthToken()` helper in `lib/api.js` retrieves token from session
+- Authenticated endpoints require `Authorization: Bearer {token}` header
+- Backend validates token via `verify_token_and_get_user_id()` (returns 401 if invalid)
+- Some endpoints also verify league ownership via `verify_league_ownership()` (returns 403 if unauthorized)
 
 **New User Journey:**
 1. Sign up → Supabase creates auth user
 2. Redirect to `/(onboarding)/username` (index.tsx checks users table, finds no entry)
-3. User enters Sleeper username → validate via Sleeper API → get `sleeper_user_id`
+3. User enters Sleeper username → validate via backend `/user/{username}/id` → get `sleeper_user_id`
 4. Navigate to `/(onboarding)/pick-league` with params
-5. Fetch user's leagues from Sleeper API → display list
+5. Fetch user's leagues from backend `/user/{sleeperUserId}/leagues/2025` → display list
 6. User picks league → fetch roster to get `sleeper_roster_id`
-7. Insert into `users` table: `{ id: auth.user.id, sleeper_username, sleeper_user_id }`
-8. Insert into `leagues` table: `{ user_id, league_id, league_name, season, sleeper_roster_id, is_active: true, ... }`
-9. Navigate to `/(tabs)/roster`
+7. **Call backend** `POST /onboarding/complete` with auth token → backend inserts into `users` and `leagues` tables
+8. Navigate to `/(tabs)/roster`
 
 **Returning User Journey:**
 1. Login → Supabase validates credentials
 2. Redirect to `/` (index.tsx)
 3. Query `users` table → user exists
 4. Redirect to `/(tabs)/roster`
+
+**Switch League Flow:**
+1. User navigates to `/(onboarding)/pick-league` (without params)
+2. Fetch user data from Supabase → get existing leagues
+3. User selects different league
+4. **Call backend** `POST /onboarding/switch-league` with auth token → backend updates `is_active` flags
 
 **Route Protection:**
 - `app/(auth)/_layout.tsx` → redirects authenticated users to `/`
@@ -147,9 +162,32 @@ Mobile (fetch) → Backend (FastAPI) → External APIs (Sleeper, FantasyPros, Ta
 ### AI Integration
 
 - `routers/ai.py` handles Claude and Gemini requests
+- **All AI endpoints require authentication** (JWT token validation)
+- **Trade/waiver endpoints verify league ownership** (prevents analyzing other users' data)
+- **League settings retrieved from Supabase** — All endpoints call `verify_league_ownership()` to get scoring format and roster structure from database (eliminates external Sleeper API call)
+- **Helper function** — `get_league_type_from_format()` converts `scoring_format` from DB ("1", "0.5", "0") to readable strings ("PPR", "HALF", "STD")
+- **Roster structure in prompts** — All AI prompts include roster constraints (e.g., "1 QB, 2 RB, 2 WR, 1 TE, 2 FLEX slots") for better positional analysis
 - System prompts enforce JSON-only responses with specific schemas
 - Trade eval sends player stats + full roster context to Claude for analysis
 - The `services/claude.py` client uses `claude-sonnet-4-6` model
+
+**Protected Endpoints:**
+- `POST /ai/compare/claude` — Token validation + ownership check (gets league settings)
+- `POST /ai/evaluate_trade/claude` — Token validation + ownership check (gets league settings)
+- `POST /ai/evaluate_waiver/claude` — Token validation + ownership check (gets league settings)
+
+**League Settings Flow:**
+```
+AI endpoint → verify_league_ownership(user_id, league_id) → Supabase leagues table
+          ↓
+league_record (scoring_format, num_qbs, num_rbs, num_wrs, num_tes, num_flex, num_bench)
+          ↓
+get_league_type_from_format() → "PPR"/"HALF"/"STD"
+          ↓
+Build roster_info string → "1 QB, 2 RB, 2 WR, 1 TE, 2 FLEX slots"
+          ↓
+Include in AI prompt for context-aware recommendations
+```
 
 ## Environment Variables
 

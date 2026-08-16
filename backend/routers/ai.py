@@ -5,7 +5,6 @@ from services.claude import ask_claude
 from services.gemini import ask_gemini
 from services.supabase import get_auth_token, verify_token_and_get_user_id, verify_league_ownership
 from routers.startsit import fetch_batch_player_info_basic
-from routers.sleeper import fetch_league_type
 from routers.trades import get_trade_players, get_roster_info
 from routers.sleeper import fetch_roster
 from app.schemas import CompareRequest, CompareResponse, ComparePlayer, TradeWaiverPlayer, TradeRequest, TradeResponse, WaiverRequest, WaiverResponse
@@ -19,6 +18,15 @@ verdict must be exactly one of: start, ok, sit.
 Rank players from 1 (best) to N (worst)."""
 
 router = APIRouter()
+
+def get_league_type_from_format(scoring_format: str) -> str:
+    """Convert scoring_format from DB to readable string."""
+    if scoring_format in ('1', '1.0'):
+        return "PPR"
+    elif scoring_format == '0.5':
+        return "HALF"
+    else:
+        return "STD"
 
 @router.post("/ai/test/claude")
 async def test_claude():
@@ -52,15 +60,22 @@ async def compare_players_claude(
     request: CompareRequest,
     authorization: str = Header(None),
 ):
-    # Validate auth token (no ownership check - less sensitive)
+    # Validate auth token
     token = get_auth_token(authorization)
     user_id = await verify_token_and_get_user_id(token)
 
+    # Get league settings from database
+    league_record = await verify_league_ownership(user_id, request.league_id)
+    league_type = get_league_type_from_format(league_record['scoring_format'])
+
+    # Build roster structure info
+    roster_info = f"{league_record['num_qbs']} QB, {league_record['num_rbs']} RB, {league_record['num_wrs']} WR, {league_record['num_tes']} TE, {league_record['num_flex']} FLEX slots"
+
     player_info = fetch_batch_player_info_basic(request.week, request.players)
-    league_type = fetch_league_type(request.league_id)["league type"]
 
     prompt = f"""Compare these fantasy football players for week {request.week} of the {request.season} season.
     League format: {league_type}
+    Roster structure: {roster_info}
     Player Info: {player_info}
 
     Rank them from best to worst start option."""
@@ -76,12 +91,26 @@ async def compare_players_claude(
     )
 
 @router.post("/ai/compare/gemini", response_model=CompareResponse)
-async def compare_players_gemini(request: CompareRequest):
+async def compare_players_gemini(
+    request: CompareRequest,
+    authorization: str = Header(None),
+):
+    # Validate auth token
+    token = get_auth_token(authorization)
+    user_id = await verify_token_and_get_user_id(token)
+
+    # Get league settings from database
+    league_record = await verify_league_ownership(user_id, request.league_id)
+    league_type = get_league_type_from_format(league_record['scoring_format'])
+
+    # Build roster structure info
+    roster_info = f"{league_record['num_qbs']} QB, {league_record['num_rbs']} RB, {league_record['num_wrs']} WR, {league_record['num_tes']} TE, {league_record['num_flex']} FLEX slots"
+
     player_info = fetch_batch_player_info_basic(request.week, request.players)
-    league_type = fetch_league_type(request.league_id)["league type"]
 
     prompt = f"""Compare these fantasy football players for week {request.week} of the {request.season} season.
     League format: {league_type}
+    Roster structure: {roster_info}
     Player Info: {player_info}
 
     Rank them from best to worst start option."""
@@ -134,9 +163,12 @@ async def evaluate_trade_claude(
 
     # Verify user owns this league (prevents analyzing other users' data)
     league_record = await verify_league_ownership(user_id, request.league_id)
+    league_type = get_league_type_from_format(league_record['scoring_format'])
+
+    # Build roster structure info for better AI recommendations
+    roster_info = f"{league_record['num_qbs']} QB, {league_record['num_rbs']} RB, {league_record['num_wrs']} WR, {league_record['num_tes']} TE, {league_record['num_flex']} FLEX slots"
 
     trade_players = get_trade_players(request.give, request.get, request.current_week)
-    league_type = fetch_league_type(request.league_id)["league type"]
 
     roster = fetch_roster(request.league_id, request.user_id)
     roster_players = get_roster_info(roster["players"], request.current_week)
@@ -144,7 +176,9 @@ async def evaluate_trade_claude(
     give_players = [p for p in trade_players if p.side == "give"]
     get_players = [p for p in trade_players if p.side == "get"]
 
-    prompt = f"""Evaluate this trade for week {request.current_week} of the {request.season} season. League format: {league_type}.
+    prompt = f"""Evaluate this trade for week {request.current_week} of the {request.season} season.
+    League format: {league_type}
+    Roster structure: {roster_info}
 
     GIVING: {give_players}
     GETTING: {get_players}
@@ -207,15 +241,20 @@ async def evaluate_waiver_claude(
 
     # Verify user owns this league (prevents analyzing other users' data)
     league_record = await verify_league_ownership(user_id, request.league_id)
+    league_type = get_league_type_from_format(league_record['scoring_format'])
+
+    # Build roster structure info for better AI recommendations
+    roster_info = f"{league_record['num_qbs']} QB, {league_record['num_rbs']} RB, {league_record['num_wrs']} WR, {league_record['num_tes']} TE, {league_record['num_flex']} FLEX slots"
 
     waiver_player = fetch_waiver_player(request.player, request.current_week)
-    league_type = fetch_league_type(request.league_id)["league type"]
 
     roster = fetch_roster(request.league_id, request.user_id)
     roster_player_ids = ":".join(roster["players"])
     roster_players = fetch_roster_players(roster_player_ids, request.current_week)
 
-    prompt = f"""Evaluate adding this player from waivers for week {request.current_week} of the {request.season} season. League format: {league_type}.
+    prompt = f"""Evaluate adding this player from waivers for week {request.current_week} of the {request.season} season.
+    League format: {league_type}
+    Roster structure: {roster_info}
 
     WAIVER PLAYER: {waiver_player}
 
