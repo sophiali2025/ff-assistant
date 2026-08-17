@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Scr
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSeason } from '@/contexts/SeasonContext';
 import { getUserLeagues, getUserRoster, completeOnboarding, switchLeague } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 
@@ -19,6 +20,7 @@ interface League {
 export default function PickLeagueScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const { currentSeason } = useSeason();
   const params = useLocalSearchParams();
   const username = params.username as string | undefined;
   const sleeperUserId = params.sleeperUserId as string | undefined;
@@ -63,12 +65,12 @@ export default function PickLeagueScreen() {
 
         setUserSleeperData({ username: actualUsername, sleeperUserId: actualSleeperUserId });
 
-        const leaguesData = await getUserLeagues(actualSleeperUserId);
+        const leaguesData = await getUserLeagues(actualSleeperUserId, currentSeason);
 
         if (!leaguesData || leaguesData.length === 0) {
           Alert.alert(
             'No Leagues Found',
-            'You don\'t have any leagues for 2025 season. Join a league on Sleeper first!',
+            `You don't have any leagues for ${currentSeason} season. Join a league on Sleeper first!`,
             [{ text: 'OK', onPress: () => router.back() }]
           );
           return;

@@ -1,4 +1,5 @@
 import httpx
+import os
 
 # --- What is httpx? ---
 # httpx is Python's equivalent of fetch() in JavaScript. It lets your
@@ -58,6 +59,40 @@ def get_recent_adds_week():
 
 def get_user_leagues(user_id: str, season: str):
     response = httpx.get(f"{SLEEPER_BASE_URL}/user/{user_id}/leagues/nfl/{season}")
+    response.raise_for_status()
+
+    return response.json()
+
+def get_nfl_state():
+    """Fetch current NFL season state from Sleeper.
+
+    Supports test mode via environment variables:
+    - TEST_SEASON: Override season (e.g., "2025")
+    - TEST_WEEK: Override week (e.g., "17")
+
+    Sleeper endpoint: GET /v1/state/nfl
+    Returns: {
+        week, season_type, season, previous_season,
+        league_season, display_week, ...
+    }
+    """
+    # Check for test mode environment variables
+    test_season = os.getenv("TEST_SEASON")
+    test_week = os.getenv("TEST_WEEK")
+
+    if test_season and test_week:
+        # Return mock NFL state for testing
+        return {
+            "week": int(test_week),
+            "season": test_season,
+            "season_type": "regular",
+            "display_week": int(test_week),
+            "league_season": test_season,
+            "previous_season": str(int(test_season) - 1),
+        }
+
+    # Live API call to Sleeper
+    response = httpx.get(f"{SLEEPER_BASE_URL}/state/nfl")
     response.raise_for_status()
 
     return response.json()

@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from services.sleeper import get_user, get_rosters, get_matchups, get_users_in_league, get_league, get_user_leagues
+from services.sleeper import get_user, get_rosters, get_matchups, get_users_in_league, get_league, get_user_leagues, get_nfl_state
 from app.data import sleeper_all_players
 
 router = APIRouter()
@@ -88,3 +88,13 @@ def fetch_roster(league_id: str, user_id: str):
     rosters = get_rosters(league_id)
     my_roster = next(r for r in rosters if r["owner_id"] == user_id)
     return my_roster
+
+# NFL state
+@router.get("/nfl/state")
+def fetch_nfl_state():
+    """Get current NFL season state (week, season, season_type).
+
+    Returns live data from Sleeper API, or test data if TEST_SEASON
+    and TEST_WEEK environment variables are set.
+    """
+    return get_nfl_state()

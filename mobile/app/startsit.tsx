@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { fetchRoster, fetchMatchupContext, comparePlayersClaude } from '@/lib/api';
 import PlayerCard from '@/components/PlayerCard';
 import StatsBox from '@/components/StatsBox';
+import { useSeason } from '@/contexts/SeasonContext';
 
 // Each player in the comparison gets a unique color.
 const PLAYER_COLORS = ['#9F98EE', '#7BB0FF', '#8AEDCE', '#ECB781'];
@@ -22,6 +23,7 @@ type RosterPlayer = {
 
 export default function StartSitScreen() {
   const router = useRouter();
+  const { currentWeek, currentSeason } = useSeason();
 
   // --- STATE ---
   const [roster, setRoster] = useState<RosterPlayer[]>([]);                   // roster loaded once on mount
@@ -42,8 +44,8 @@ export default function StartSitScreen() {
   // Runs once when the screen loads. Fetches your full roster from
   // the backend and stores it in state.
   useEffect(() => {
-    fetchRoster().then(setRoster).catch(() => {});
-  }, []);
+    fetchRoster(currentWeek, currentSeason).then(setRoster).catch(() => {});
+  }, [currentWeek, currentSeason]);
 
   // --- DERIVED DATA ---
   // Not state — just computed from state on every render.
@@ -66,7 +68,7 @@ export default function StartSitScreen() {
     setSearchQuery('');   // clear the search bar
 
     // Fetch matchup context (team, opponent) for this player.
-    fetchMatchupContext(player.player_id)
+    fetchMatchupContext(player.player_id, currentWeek)
       .then(data => {
         if (!data.error) {
           setMatchups(prev => ({ ...prev, [player.player_id]: data }));
@@ -97,7 +99,7 @@ export default function StartSitScreen() {
     // comparePlayersClaude will join them with ":" for the backend.
     const playerIds = selectedPlayers.map(p => p.player_id);
 
-    comparePlayersClaude(playerIds)
+    comparePlayersClaude(playerIds, currentWeek, currentSeason)
       .then(result => {
         setAdvice(result);
         setActiveDot(0);
@@ -121,7 +123,7 @@ export default function StartSitScreen() {
           </TouchableOpacity>
           <Text style={styles.title}>Start/Sit</Text>
         </View>
-        <Text style={styles.weekText}>Wk 9 - synced</Text>
+        <Text style={styles.weekText}>Week {currentWeek}</Text>
       </View>
 
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">

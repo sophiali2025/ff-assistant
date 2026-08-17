@@ -6,6 +6,7 @@ import TradeSidePanel from '@/components/TradeSidePanel';
 import TradeResultCard from '@/components/TradeResultCard';
 import TradeStatsCard from '@/components/TradeStatsCard';
 import { evaluateTrade } from '@/lib/api';
+import { useSeason } from '@/contexts/SeasonContext';
 
 type Player = {
   player_id: string;
@@ -23,6 +24,7 @@ type TradeResult = {
 
 export default function TradeScreen() {
   const router = useRouter();
+  const { currentWeek, currentSeason } = useSeason();
 
   const [givePlayers, setGivePlayers] = useState<Player[]>([]);
   const [getPlayers, setGetPlayers] = useState<Player[]>([]);
@@ -37,6 +39,8 @@ export default function TradeScreen() {
       const data = await evaluateTrade(
         givePlayers.map((p) => p.player_id),
         getPlayers.map((p) => p.player_id),
+        currentWeek,
+        currentSeason,
       );
       setResult({ verdict: data.verdict, summary: data.summary });
     } catch {
@@ -64,7 +68,7 @@ export default function TradeScreen() {
           </TouchableOpacity>
           <Text style={styles.title}>Trade Analyzer</Text>
         </View>
-        <Text style={styles.weekText}>Wk 9 - synced</Text>
+        <Text style={styles.weekText}>Week {currentWeek}</Text>
       </View>
 
       <TradeSidePanel

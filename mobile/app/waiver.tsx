@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { searchPlayers, fetchDisplayStats, evaluateWaiver } from '@/lib/api';
 import PlayerStatsCard from '@/components/PlayerStatsCard';
+import { useSeason } from '@/contexts/SeasonContext';
 
 type Player = {
   player_id: string;
@@ -33,6 +34,7 @@ type WaiverResult = {
 
 export default function WaiverScreen() {
   const router = useRouter();
+  const { currentWeek, currentSeason } = useSeason();
 
   const [searchText, setSearchText] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -63,7 +65,7 @@ export default function WaiverScreen() {
     setResult(null);
 
     try {
-      const data = await fetchDisplayStats(playerId);
+      const data = await fetchDisplayStats(playerId, currentWeek);
 
       // Set selected player info
       setSelectedPlayer({
@@ -98,7 +100,7 @@ export default function WaiverScreen() {
     setResult(null);
 
     try {
-      const data = await evaluateWaiver(selectedPlayer.player_id);
+      const data = await evaluateWaiver(selectedPlayer.player_id, currentWeek, currentSeason);
 
       // Map the backend response to frontend format
       setResult({
@@ -133,7 +135,7 @@ export default function WaiverScreen() {
     // Otherwise, expand this player and fetch their stats
     setExpandedDropPlayer(playerId);
     try {
-      const data = await fetchDisplayStats(playerId);
+      const data = await fetchDisplayStats(playerId, currentWeek);
       setExpandedPlayerStats({
         positionRank: data.overall_ranking ? `${Math.round(data.overall_ranking)}` : 'N/A',
         rosPositionRank: data.ros_ranking ? `${data.ros_ranking}` : 'N/A',
@@ -166,7 +168,7 @@ export default function WaiverScreen() {
           </TouchableOpacity>
           <Text style={styles.title}>Waivers</Text>
         </View>
-        <Text style={styles.weekText}>Wk 9 - synced</Text>
+        <Text style={styles.weekText}>Week {currentWeek}</Text>
       </View>
 
       {/* Search Bar */}

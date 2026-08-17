@@ -5,10 +5,6 @@ import { supabase } from './supabase';
 // process.env. This lets us change the URL without editing code.
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
-// Constants (these stay the same for all users)
-const WEEK = 17
-const SEASON = 2025
-
 // Toggle this to enable/disable projection API calls.
 // Set to false to avoid burning API calls during development.
 const PROJECTIONS_ENABLED = true;
@@ -45,9 +41,9 @@ export async function validateSleeperUsername(username) {
   }
 }
 
-export async function getUserLeagues(sleeperUserId) {
+export async function getUserLeagues(sleeperUserId, season) {
   try {
-    const response = await fetch(`${API_URL}/user/${sleeperUserId}/leagues/2025`);
+    const response = await fetch(`${API_URL}/user/${sleeperUserId}/leagues/${season}`);
 
     if (!response.ok) {
       throw new Error('Failed to fetch leagues');
@@ -180,14 +176,14 @@ async function getActiveUserData() {
 
 // ========== Existing API Calls ==========
 
-export async function fetchMatchup() {
+export async function fetchMatchup(week, season) {
   // Get user's dynamic data from database
   const { userId, leagueId, rosterId } = await getActiveUserData();
 
   // 1. get my matchup + my team name at the same time.
   // Promise.all runs them in parallel (faster than one-by-one).
   const [myResponse, myTeamResponse] = await Promise.all([
-    fetch(`${API_URL}/matchup/${leagueId}/${WEEK}/${rosterId}`),
+    fetch(`${API_URL}/matchup/${leagueId}/${week}/${rosterId}`),
     fetch(`${API_URL}/team/${leagueId}/${userId}`),
   ]);
   if (!myResponse.ok) throw new Error(`Failed to fetch my matchup: ${myResponse.status}`);
@@ -199,14 +195,14 @@ export async function fetchMatchup() {
   // Check if there's a matchup this week (could be null for playoffs/bye weeks)
   if (!myMatchup.matchup_id) {
     return {
-      week: WEEK,
+      week: week,
       my_team: { name: myTeam.team_name, points: myMatchup.points ?? 0, projected_points: 0 },
       opponent: { name: 'No Matchup', points: 0, projected_points: 0 },
     };
   }
 
   // 2. get opponent's matchup (needs matchup_id from step 1)
-  const oppResponse = await fetch(`${API_URL}/matchup/${leagueId}/${WEEK}/${rosterId}/${myMatchup.matchup_id}`);
+  const oppResponse = await fetch(`${API_URL}/matchup/${leagueId}/${week}/${rosterId}/${myMatchup.matchup_id}`);
   if (!oppResponse.ok) throw new Error(`Failed to fetch opponent matchup: ${oppResponse.status}`);
   const oppMatchup = await oppResponse.json();
 
@@ -217,8 +213,8 @@ export async function fetchMatchup() {
   if (PROJECTIONS_ENABLED) {
     const [oppTeamResponse, myProjResponse, oppProjResponse] = await Promise.all([
       fetch(`${API_URL}/team/${leagueId}/roster/${oppMatchup.roster_id}`),
-      fetch(`${API_URL}/projection/roster/${leagueId}/${rosterId}/${WEEK}`),
-      fetch(`${API_URL}/projection/roster/${leagueId}/${oppMatchup.roster_id}/${WEEK}`),
+      fetch(`${API_URL}/projection/roster/${leagueId}/${rosterId}/${week}`),
+      fetch(`${API_URL}/projection/roster/${leagueId}/${oppMatchup.roster_id}/${week}`),
     ]);
     if (!oppTeamResponse.ok) throw new Error(`Failed to fetch opponent team: ${oppTeamResponse.status}`);
     const oppTeam = await oppTeamResponse.json();
@@ -228,7 +224,7 @@ export async function fetchMatchup() {
     oppProjected = oppProj.projected_points ?? 0;
 
     return {
-      week: WEEK,
+      week: week,
       my_team: { name: myTeam.team_name, points: myMatchup.points, projected_points: myProjected },
       opponent: { name: oppTeam.team_name, points: oppMatchup.points, projected_points: oppProjected },
     };
@@ -241,13 +237,13 @@ export async function fetchMatchup() {
 
   // 4. combine into the shape our WeeklyMatch component expects
   return {
-    week: WEEK,
+    week: week,
     my_team: { name: myTeam.team_name, points: myMatchup.points, projected_points: 0 },
     opponent: { name: oppTeam.team_name, points: oppMatchup.points, projected_points: 0 },
   };
 }
 
-export async function fetchRoster() {
+export async function fetchRoster(week, season) {
   // Get user's dynamic data from database
   const { userId, leagueId, rosterId } = await getActiveUserData();
 
@@ -273,7 +269,7 @@ export async function fetchRoster() {
   // how many points each player scored this week.
   const [rosterResponse, matchupResponse] = await Promise.all([
     fetch(`${API_URL}/roster/${leagueId}/${userId}`),
-    fetch(`${API_URL}/matchup/${leagueId}/${WEEK}/${rosterId}`),
+    fetch(`${API_URL}/matchup/${leagueId}/${week}/${rosterId}`),
   ]);
   if (!rosterResponse.ok) throw new Error(`Failed to fetch roster: ${rosterResponse.status}`);
   if (!matchupResponse.ok) throw new Error(`Failed to fetch matchup: ${matchupResponse.status}`);
@@ -305,7 +301,7 @@ export async function fetchRoster() {
   const projectionsById = {};
   if (PROJECTIONS_ENABLED) {
     const ids = roster.players.join(":");
-    const projResponse = await fetch(`${API_URL}/projection/batch/${WEEK}?sleeper_ids=${ids}`);
+    const projResponse = await fetch(`${API_URL}/projection/batch/${week}?sleeper_ids=${ids}`);
     const projData = await projResponse.json();
     Object.assign(projectionsById, projData.projections ?? {});
   }
@@ -363,7 +359,7 @@ export async function fetchRoster() {
 // POST /ai/compare/claude — sends selected player IDs to the AI
 // comparison endpoint. Unlike GET requests where data goes in the URL,
 // POST requests send data in the request body as JSON.
-export async function comparePlayersClaude(playerIds) {
+export async function comparePlayersClaude(playerIds, week, season) {
   // Get auth token for authenticated request
   const token = await getAuthToken();
 
@@ -383,15 +379,15 @@ export async function comparePlayersClaude(playerIds) {
     body: JSON.stringify({
       players,
       league_id: leagueId,
-      week: WEEK,
-      season: SEASON,
+      week: week,
+      season: season,
     }),
   });
   if (!response.ok) throw new Error(`Compare failed: ${response.status}`);
   return await response.json();
 }
 
-export async function fetchMatchupContext(playerId, week = WEEK) {
+export async function fetchMatchupContext(playerId, week) {
   const response = await fetch(`${API_URL}/startsit/matchup_context/${playerId}/${week}`);
   if (!response.ok) throw new Error(`Failed to fetch matchup context: ${response.status}`);
   return await response.json();
@@ -414,7 +410,7 @@ export async function searchPlayers(query) {
 
 // Fetch complete display stats for a player (for waiver screen).
 // Returns player info, projected points, waiver stats, and rankings.
-export async function fetchDisplayStats(playerId, week = WEEK) {
+export async function fetchDisplayStats(playerId, week) {
   const response = await fetch(`${API_URL}/waivers/display_stats/${playerId}/${week}`);
   if (!response.ok) throw new Error(`Display stats failed: ${response.status}`);
   return await response.json();
@@ -422,7 +418,7 @@ export async function fetchDisplayStats(playerId, week = WEEK) {
 
 // Send trade player IDs to Claude for evaluation. Returns a verdict
 // (accept/decline/counter) and a summary explanation.
-export async function evaluateTrade(givePlayerIds, getPlayerIds) {
+export async function evaluateTrade(givePlayerIds, getPlayerIds, week, season) {
   // Get auth token for authenticated request
   const token = await getAuthToken();
 
@@ -440,8 +436,8 @@ export async function evaluateTrade(givePlayerIds, getPlayerIds) {
       get: getPlayerIds.join(":"),
       league_id: leagueId,
       user_id: userId,
-      season: SEASON,
-      current_week: WEEK,
+      season: season,
+      current_week: week,
     }),
   });
   if (!response.ok) throw new Error(`Trade eval failed: ${response.status}`);
@@ -450,7 +446,7 @@ export async function evaluateTrade(givePlayerIds, getPlayerIds) {
 
 // Send waiver player ID to Claude for evaluation. Returns a verdict
 // (add/don't add), summary, and suggested drop players.
-export async function evaluateWaiver(playerId) {
+export async function evaluateWaiver(playerId, week, season) {
   // Get auth token for authenticated request
   const token = await getAuthToken();
 
@@ -467,8 +463,8 @@ export async function evaluateWaiver(playerId) {
       player: playerId,
       league_id: leagueId,
       user_id: userId,
-      season: SEASON,
-      current_week: WEEK,
+      season: season,
+      current_week: week,
     }),
   });
   if (!response.ok) throw new Error(`Waiver eval failed: ${response.status}`);

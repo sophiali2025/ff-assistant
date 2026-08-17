@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { StyleSheet, ActivityIndicator } from 'react-native';
+import { StyleSheet, ActivityIndicator, Text } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 
 import { View } from '@/components/default/Themed';
@@ -9,6 +9,7 @@ import RosterList from '@/components/RosterList';
 import ProfileDropdown from '@/components/ProfileDropdown';
 import { fetchMatchup, fetchRoster } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSeason } from '@/contexts/SeasonContext';
 import { supabase } from '@/lib/supabase';
 
 // --- useState and useEffect ---
@@ -26,6 +27,7 @@ import { supabase } from '@/lib/supabase';
 
 export default function RosterScreen() {
   const { user } = useAuth();
+  const { currentWeek, currentSeason, seasonType } = useSeason();
 
   // matchup starts as null because we don't have data yet.
   // Once the fetch completes, we call setMatchup with the data,
@@ -56,15 +58,35 @@ export default function RosterScreen() {
           });
       }
 
-      fetchMatchup()
+      fetchMatchup(currentWeek, currentSeason)
         .then((data) => setMatchup(data))
         .catch((err) => console.error('Error fetching matchup:', err));
 
-      fetchRoster()
+      fetchRoster(currentWeek, currentSeason)
         .then((data) => setRoster(data))
         .catch((err) => console.error('Error fetching roster:', err));
-    }, [user])
+    }, [user, currentWeek, currentSeason])
   );
+
+  // Preseason check - show special message if season hasn't started
+  if (seasonType === 'pre') {
+    return (
+      <View style={styles.container}>
+        <Header
+          week={0}
+          initials={userInitial}
+          onAvatarPress={() => setShowProfileDropdown(true)}
+        />
+        <View style={styles.preseasonContainer}>
+          <Text style={styles.preseasonMessage}>Season has not started yet</Text>
+        </View>
+        <ProfileDropdown
+          visible={showProfileDropdown}
+          onClose={() => setShowProfileDropdown(false)}
+        />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -110,5 +132,18 @@ const styles = StyleSheet.create({
   },
   loader: {
     marginVertical: 30,
+  },
+  preseasonContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#23173E',
+  },
+  preseasonMessage: {
+    fontSize: 18,
+    fontFamily: 'Jaldi',
+    color: '#A1C4F9',
+    textAlign: 'center',
   },
 });

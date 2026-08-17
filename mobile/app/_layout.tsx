@@ -9,6 +9,7 @@ import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/default/useColorScheme';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { SeasonProvider } from '@/contexts/SeasonContext';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -49,10 +50,13 @@ export default function RootLayout() {
 
   // wrap RootLayoutNav in AuthProvider so that RootLayoutNav
   // (and all its children) can access auth state via useAuth().
+  // wrap in SeasonProvider so all screens can access NFL season state.
 
   return (
     <AuthProvider>
-      <RootLayoutNav />
+      <SeasonProvider>
+        <RootLayoutNav />
+      </SeasonProvider>
     </AuthProvider>
   );
 }
