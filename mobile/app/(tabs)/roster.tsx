@@ -68,8 +68,8 @@ export default function RosterScreen() {
     }, [user, currentWeek, currentSeason])
   );
 
-  // Preseason check - show special message if season hasn't started
-  if (seasonType === 'pre') {
+  // Preseason check - only show message if user has no roster yet
+  if (seasonType === 'pre' && roster !== null && roster.length === 0) {
     return (
       <View style={styles.container}>
         <Header

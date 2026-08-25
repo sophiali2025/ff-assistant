@@ -64,7 +64,7 @@ export function SeasonProvider({ children }: { children: React.ReactNode }) {
    * Process NFL state and apply business logic
    *
    * Business rules:
-   * - Preseason: Use fallback values, UI shows "season not started"
+   * - Preseason: Use week 1 of current season (fallback to week 17 of previous season if API fails)
    * - Postseason: Use week 17 of previous season
    * - Regular season: Use display_week of league_season
    */
@@ -73,9 +73,9 @@ export function SeasonProvider({ children }: { children: React.ReactNode }) {
     let season: string;
 
     if (state.season_type === 'pre') {
-      // Preseason — will trigger special UI
-      week = FALLBACK_WEEK;
-      season = FALLBACK_SEASON;
+      // Preseason — use week 1 of current season
+      week = 1;
+      season = state.season;
     } else if (state.season_type === 'post') {
       // Postseason — use week 17 of previous season
       week = 17;

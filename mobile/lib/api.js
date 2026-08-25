@@ -192,12 +192,12 @@ export async function fetchMatchup(week, season) {
   const myMatchup = await myResponse.json();
   const myTeam = await myTeamResponse.json();
 
-  // Check if there's a matchup this week (could be null for playoffs/bye weeks)
-  if (!myMatchup.matchup_id) {
+  // Check if there's a matchup this week (could be null for playoffs/bye weeks or no roster yet)
+  if (!myMatchup || !myMatchup.matchup_id) {
     return {
       week: week,
-      my_team: { name: myTeam.team_name, points: myMatchup.points ?? 0, projected_points: 0 },
-      opponent: { name: 'No Matchup', points: 0, projected_points: 0 },
+      my_team: { name: myTeam?.team_name ?? 'My Team', points: myMatchup?.points ?? null, projected_points: null },
+      opponent: { name: 'No Matchup', points: null, projected_points: null },
     };
   }
 
@@ -207,26 +207,26 @@ export async function fetchMatchup(week, season) {
   const oppMatchup = await oppResponse.json();
 
   // 3. get opponent's team name and (if enabled) both teams' projected totals
-  let myProjected = 0;
-  let oppProjected = 0;
+  let myProjected = null;
+  let oppProjected = null;
 
   if (PROJECTIONS_ENABLED) {
     const [oppTeamResponse, myProjResponse, oppProjResponse] = await Promise.all([
       fetch(`${API_URL}/team/${leagueId}/roster/${oppMatchup.roster_id}`),
-      fetch(`${API_URL}/projection/roster/${leagueId}/${rosterId}/${week}`),
-      fetch(`${API_URL}/projection/roster/${leagueId}/${oppMatchup.roster_id}/${week}`),
+      fetch(`${API_URL}/projection/roster/${leagueId}/${rosterId}/${week}?season=${season}`),
+      fetch(`${API_URL}/projection/roster/${leagueId}/${oppMatchup.roster_id}/${week}?season=${season}`),
     ]);
     if (!oppTeamResponse.ok) throw new Error(`Failed to fetch opponent team: ${oppTeamResponse.status}`);
     const oppTeam = await oppTeamResponse.json();
     const myProj = await myProjResponse.json();
     const oppProj = await oppProjResponse.json();
-    myProjected = myProj.projected_points ?? 0;
-    oppProjected = oppProj.projected_points ?? 0;
+    myProjected = myProj.projected_points ?? null;
+    oppProjected = oppProj.projected_points ?? null;
 
     return {
       week: week,
-      my_team: { name: myTeam.team_name, points: myMatchup.points, projected_points: myProjected },
-      opponent: { name: oppTeam.team_name, points: oppMatchup.points, projected_points: oppProjected },
+      my_team: { name: myTeam.team_name, points: myMatchup.points ?? null, projected_points: myProjected },
+      opponent: { name: oppTeam.team_name, points: oppMatchup.points ?? null, projected_points: oppProjected },
     };
   }
 
@@ -238,8 +238,8 @@ export async function fetchMatchup(week, season) {
   // 4. combine into the shape our WeeklyMatch component expects
   return {
     week: week,
-    my_team: { name: myTeam.team_name, points: myMatchup.points, projected_points: 0 },
-    opponent: { name: oppTeam.team_name, points: oppMatchup.points, projected_points: 0 },
+    my_team: { name: myTeam.team_name, points: myMatchup.points ?? null, projected_points: null },
+    opponent: { name: oppTeam.team_name, points: oppMatchup.points ?? null, projected_points: null },
   };
 }
 
@@ -277,6 +277,11 @@ export async function fetchRoster(week, season) {
   const roster = await rosterResponse.json();
   const matchup = await matchupResponse.json();
 
+  // Check if roster exists and has players (return empty array if no roster yet)
+  if (!roster || !roster.players || roster.players.length === 0) {
+    return [];
+  }
+
   // 2. Fetch details for every player on the roster in parallel.
   // roster.players is an array of IDs like ["4042", "4046", ...].
   // We call GET /player/{id} for each one, all at the same time.
@@ -301,7 +306,7 @@ export async function fetchRoster(week, season) {
   const projectionsById = {};
   if (PROJECTIONS_ENABLED) {
     const ids = roster.players.join(":");
-    const projResponse = await fetch(`${API_URL}/projection/batch/${week}?sleeper_ids=${ids}`);
+    const projResponse = await fetch(`${API_URL}/projection/batch/${week}?sleeper_ids=${ids}&season=${season}`);
     const projData = await projResponse.json();
     Object.assign(projectionsById, projData.projections ?? {});
   }
@@ -314,6 +319,12 @@ export async function fetchRoster(week, season) {
 
   const starters = roster.starters.map((id, index) => {
     const detail = detailsById[id];
+
+    // Skip if player details are missing
+    if (!detail) {
+      return null;
+    }
+
     let slot;
 
     // Check if this index is in the FLEX range
@@ -330,10 +341,10 @@ export async function fetchRoster(week, season) {
       position: detail.position ?? "??",
       slot,
       status: detail.injury_status?.toLowerCase() ?? "active",
-      points_this_week: matchup.players_points?.[id] ?? 0,
+      points_this_week: matchup?.players_points?.[id] ?? null,
       projected_points: projectionsById[id] ?? 0,
     };
-  });
+  }).filter(Boolean);
 
   // 5. Build the bench list — everyone in players who isn't a starter.
   const starterSet = new Set(roster.starters);
@@ -341,16 +352,23 @@ export async function fetchRoster(week, season) {
     .filter((id) => !starterSet.has(id))
     .map((id) => {
       const detail = detailsById[id];
+
+      // Skip if player details are missing
+      if (!detail) {
+        return null;
+      }
+
       return {
         player_id: id,
         name: `${detail.first_name} ${detail.last_name}`,
         position: detail.position ?? "??",
         slot: "BN",
         status: detail.injury_status?.toLowerCase() ?? "active",
-        points_this_week: matchup.players_points?.[id] ?? 0,
+        points_this_week: matchup?.players_points?.[id] ?? null,
         projected_points: projectionsById[id] ?? 0,
       };
-    });
+    })
+    .filter(Boolean);
 
   // 6. Return starters first, then bench — that's the natural roster order.
   return [...starters, ...bench];

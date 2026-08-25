@@ -11,8 +11,8 @@ import { View, Text, StyleSheet } from 'react-native';
 
 type TeamScoreProps = {
   name: string;
-  actualPoints: number;
-  projectedPoints: number;
+  actualPoints: number | null;
+  projectedPoints: number | null;
   // `alignRight` flips the text alignment for the opponent side.
   // It's a boolean prop — the parent passes `true` or `false`.
   alignRight?: boolean;
@@ -27,10 +27,10 @@ export default function TeamScore({ name, actualPoints, projectedPoints, alignRi
         {name}
       </Text>
       <Text style={[styles.actual, alignRight && styles.textRight]}>
-        {actualPoints.toFixed(2)}
+        {actualPoints !== null && !isNaN(actualPoints) ? actualPoints.toFixed(2) : '-'}
       </Text>
       <Text style={[styles.projected, alignRight && styles.textRight]}>
-        {projectedPoints.toFixed(2)}
+        {projectedPoints !== null && !isNaN(projectedPoints) ? projectedPoints.toFixed(2) : '-'}
       </Text>
     </View>
   );

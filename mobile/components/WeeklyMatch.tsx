@@ -10,11 +10,11 @@ import TeamScore from './TeamScore';
 type WeeklyMatchProps = {
   week: number,
   myTeamName: string;
-  myActual: number;
-  myProjected: number;
+  myActual: number | null;
+  myProjected: number | null;
   oppTeamName: string;
-  oppActual: number;
-  oppProjected: number;
+  oppActual: number | null;
+  oppProjected: number | null;
 };
 
 export default function WeeklyMatch({

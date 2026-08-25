@@ -29,7 +29,7 @@ type PlayerRowProps = {
   slot: string;     // roster slot: QB, RB, WR, TE, K, DEF, FLX, BN
   name: string;
   status: string;
-  actualPoints: number;
+  actualPoints: number | null;
   projectedPoints: number;
   selected?: boolean;
   isFirst?: boolean;
@@ -68,7 +68,9 @@ export default function PlayerRow({ slot, name, status, actualPoints, projectedP
 
           {/* Right section: points */}
           <View style={styles.points}>
-            <Text style={styles.actualPoints}>{actualPoints.toFixed(1)}</Text>
+            <Text style={styles.actualPoints}>
+              {actualPoints !== null && !isNaN(actualPoints) ? actualPoints.toFixed(1) : '-'}
+            </Text>
             <Text style={styles.projectedPoints}>{projectedPoints.toFixed(1)}</Text>
           </View>
         </View>
