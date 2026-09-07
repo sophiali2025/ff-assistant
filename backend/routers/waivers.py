@@ -61,7 +61,7 @@ def fetch_player_snap_share(player_id: str):
         return None
 
     # Load snap counts and filter to this player.
-    snaps = nfl.load_snap_counts(seasons=2025)
+    snaps = nfl.load_snap_counts(seasons=2026)
     player_snaps = snaps.filter(snaps["player"] == full_name)
 
     if player_snaps.is_empty():

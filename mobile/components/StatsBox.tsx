@@ -1,7 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native';
 
-const PLAYER_COLORS = ['#9F98EE', '#7BB0FF', '#8AEDCE', '#ECB781'];
-
 const STATIC_STAT_ROWS = [
   { label: 'game total', values: ['coming soon'] },
   { label: 'spread', values: ['coming soon'] },
@@ -16,6 +14,12 @@ type ComparePlayer = {
 
 type Props = {
   players: ComparePlayer[];
+  // Each player's color, matched to the same player card color shown
+  // above (players[i] pairs with colors[i]). Claude returns players
+  // sorted by rank, not by original card order, so the caller must
+  // resolve these by matching player name back to the card order —
+  // we can't just reuse a fixed palette by array index here.
+  colors: string[];
 };
 
 // Extract the numeric value from a stat string.
@@ -36,7 +40,7 @@ const pillWidth = (val: string, allValues: string[], invert = false) => {
   return MIN_PILL + ratio * (MAX_PILL - MIN_PILL);
 };
 
-export default function StatsBox({ players }: Props) {
+export default function StatsBox({ players, colors }: Props) {
   const statRows = [
     { label: 'projected', values: players.map(p => p.projection.toFixed(1)) },
     { label: 'ranking', values: players.map(p => p.ranking) },
@@ -54,7 +58,7 @@ export default function StatsBox({ players }: Props) {
               ? <Text style={styles.comingSoonText}>coming soon</Text>
               : row.values.map((val, j) => (
                 <View key={j} style={[styles.statPill, {
-                  backgroundColor: PLAYER_COLORS[j],
+                  backgroundColor: colors[j],
                   width: pillWidth(val, row.values, row.label === 'ranking'),
                 }]}>
                   <Text style={styles.statPillText}>{val}</Text>

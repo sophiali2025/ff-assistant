@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Fantasy Football Assistant — a mobile app that helps fantasy football players view rosters and matchups, get AI-powered start/sit recommendations, trade analysis, and waiver pickup advice. Integrates with Sleeper (fantasy football platform), FantasyPros (fantasy football data), Tank01 (projections), and Anthropic Claude (AI recommendations).
+Fantasy Football Assistant — a mobile app that helps fantasy football players view rosters and matchups, get AI-powered start/sit recommendations, trade analysis, and waiver pickup advice. Integrates with Sleeper (fantasy football platform), FantasyPros (player projections and data), and Anthropic Claude (AI recommendations).
 
 ## Monorepo Structure
 
@@ -45,6 +45,22 @@ Route groups:
 - `app/(onboarding)/` — Onboarding flow for new users (username input, league selection)
 - `app/trade.tsx`, `app/startsit.tsx`, `app/waiver.tsx` — Stack screens navigated to from tabs
 
+Season & Week Management (`contexts/SeasonContext.tsx`):
+- Fetches current NFL state from `/nfl/state` endpoint (refreshes every 24 hours)
+- **Preseason handling**: During preseason (`season_type === 'pre'`), uses week 1 of current season for roster/matchup display
+- **Postseason handling**: Uses week 17 of previous season
+- **Regular season**: Uses `display_week` of `league_season`
+- **Fallback**: If API fails, defaults to week 17 of 2025
+- Test mode via env variables: `EXPO_PUBLIC_TEST_SEASON` and `EXPO_PUBLIC_TEST_WEEK`
+
+UI Display Logic:
+- **Null points display**: Components show "-" when points are `null` or `NaN` (game not played yet)
+  - `PlayerRow.tsx`: Shows "-" for `actualPoints` when null
+  - `TeamScore.tsx`: Shows "-" for both actual and projected points when null
+  - `WeeklyMatch.tsx`: Accepts `number | null` for all point values
+- **Preseason roster**: If `seasonType === 'pre'` and roster is empty, shows "Season has not started yet"
+- **Error handling**: Gracefully handles missing roster/matchup data when switching leagues (returns empty arrays instead of crashing)
+
 Auth & Onboarding:
 - Global auth state managed via `AuthContext` (in `contexts/AuthContext.tsx`)
 - `useAuth()` hook provides `user`, `session`, `loading`, and `signOut()`
@@ -60,6 +76,9 @@ API layer (`lib/api.js`):
 - **Dynamic user data**: `getActiveUserData()` queries Supabase database for user's Sleeper IDs
 - Fetches `sleeper_user_id` from `users` table and active league's `league_id`/`sleeper_roster_id` from `leagues` table
 - Uses `Promise.all()` for parallel requests where possible
+- **Null handling**: Returns `null` for points when data is unavailable (games not played yet) instead of `0`
+  - Allows UI to distinguish between "scored 0 points" and "game hasn't happened yet"
+  - Applies to player points (`points_this_week`), matchup points, and projected points
 
 ### Backend
 
@@ -70,7 +89,41 @@ API layer (`lib/api.js`):
 - **Static data**: `app/data.py` loads player databases and ID mappings from `data/` files at startup (no database)
 - **Services**: `services/` contains external API integrations (sleeper, fantasypros, claude, tank01, gemini, supabase)
   - `services/supabase.py` — Supabase client and auth helpers (get_auth_token, verify_token_and_get_user_id, verify_league_ownership)
+  - `services/fantasypros.py` — FantasyPros API integration for projections and player data
 - **Routers**: `routers/` has modular route handlers (sleeper, startsit, trades, projections, ai, gifs, leagues, onboarding)
+
+### Projections System
+
+**Data Source**: FantasyPros API (PPR scoring)
+- **Batch endpoint**: `/projection/batch/{week}?sleeper_ids={ids}&season={season}` — Fetches projections for multiple players
+- **Single player**: `/projection/{player_id}/{week}?season={season}` — Fetches projection for one player
+- **Roster total**: `/projection/roster/{league_id}/{roster_id}/{week}?season={season}` — Sums all starter projections
+
+**Implementation**:
+- Mobile app passes Sleeper IDs and season to backend
+- Backend converts Sleeper IDs → FantasyPros IDs using `sleeper_fp_map`
+- Calls FantasyPros API with correct season (e.g., "2026" for preseason 2026)
+- Parses `points_ppr` field from response (PPR scoring format)
+- Returns projections keyed by Sleeper IDs
+
+**Response Structure**:
+```json
+{
+  "players": [
+    {
+      "fpid": 23136,
+      "name": "Player Name",
+      "stats": {
+        "points": 13.76,      // Standard scoring
+        "points_ppr": 17.37,  // PPR scoring (used)
+        "points_half": 15.56  // Half PPR scoring
+      }
+    }
+  ]
+}
+```
+
+**Important**: Season parameter is required to fetch correct projections (hardcoded "2025" will fail for 2026 preseason)
 
 ### Database (Supabase)
 

@@ -196,8 +196,19 @@ export default function StartSitScreen() {
           </Text>
         </TouchableOpacity>
 
-        {/* Stats box — only appears after Claude responds */}
-        {advice && <StatsBox players={advice.players} />}
+        {/* Stats box — only appears after Claude responds. Claude returns
+            players sorted by rank, not by card order, so we look up each
+            player's color by matching name back to selectedPlayers instead
+            of assuming array index lines up with the cards above. */}
+        {advice && (
+          <StatsBox
+            players={advice.players}
+            colors={advice.players.map(p => {
+              const cardIndex = selectedPlayers.findIndex(sp => sp.name === p.player);
+              return PLAYER_COLORS[cardIndex] ?? PLAYER_COLORS[0];
+            })}
+          />
+        )}
 
         {/* Suggestion box — swipe inside the box to see each player */}
         {advice && (() => {

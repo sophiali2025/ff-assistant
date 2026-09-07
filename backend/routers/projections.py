@@ -11,7 +11,7 @@ router = APIRouter()
 # Batch route must come before the single-player route, because
 # /projection/{player_id}/{week} would match "batch" as a player_id.
 @router.get("/projection/batch/{week}")
-def fetch_batch_projections(week: int, sleeper_ids: str, season: str = "2025"):
+def fetch_batch_projections(week: int, sleeper_ids: str, season: str = "2026"):
     """Fetch projections for multiple players using FantasyPros.
     sleeper_ids is a colon-separated string of Sleeper player IDs."""
     id_list = sleeper_ids.split(":")
@@ -54,7 +54,7 @@ def fetch_batch_projections(week: int, sleeper_ids: str, season: str = "2025"):
     return {"projections": result}
 
 @router.get("/projection/roster/{league_id}/{roster_id}/{week}")
-def fetch_all_starters_projection(league_id: str, roster_id: int, week: int, season: str = "2025"):
+def fetch_all_starters_projection(league_id: str, roster_id: int, week: int, season: str = "2026"):
     rosters = get_rosters(league_id)
     roster = next((r for r in rosters if r["roster_id"] == roster_id), None)
     if roster is None:
@@ -73,7 +73,7 @@ def fetch_all_starters_projection(league_id: str, roster_id: int, week: int, sea
 
 # Use FantasyPros for all player projections
 @router.get("/projection/{player_id}/{week}")
-def fetch_projection(player_id: str, week: int, season: str = "2025"):
+def fetch_projection(player_id: str, week: int, season: str = "2026"):
     # player_id is a Sleeper ID — convert to FantasyPros ID
     fp_id = sleeper_fp_map.get(player_id)
     if not fp_id:

@@ -5,7 +5,7 @@ import nflreadpy as nfl
 
 load_dotenv()
 
-SEASON = "2025"
+SEASON = "2026"
 
 FANTASY_PROS_URL = "https://api.fantasypros.com/public/v2/json"
 

@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-SEASON = "2025"
+SEASON = "2026"
 SEASONTYPE = 2
 
 ESPN_BASE_URL = "https://site.api.espn.com/apis/site/v2/sports/football/nfl"
